@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d1b">
+  <meta name="description" content="AUTO LINK PRO - công cụ kiểm tra và xử lý liên kết qua API chính thức.">
+  <title>AUTO LINK PRO</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="glow glow-a"></div><div class="glow glow-b"></div>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="AUTO LINK PRO trang chủ">
+      <span class="brand-mark">↗</span><span>AUTO LINK <b>PRO</b></span>
+    </a>
+    <span class="status"><i></i> HỆ THỐNG SẴN SÀNG</span>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow"><span></span> SMART LINK PROCESSOR</div>
+      <h1>Xử lý liên kết<br><em>thông minh hơn.</em></h1>
+      <p class="sub">Dán liên kết để kiểm tra khả năng xử lý qua API chính thức của nhà cung cấp.</p>
+
+      <div class="panel">
+        <label for="urlInput">LIÊN KẾT CỦA BẠN</label>
+        <div class="input-row">
+          <input id="urlInput" type="url" placeholder="https://example.com/your-link" autocomplete="url">
+          <button id="pasteBtn" class="paste" type="button" title="Dán từ clipboard">Dán</button>
+        </div>
+        <button id="processBtn" class="primary" type="button">
+          <span class="btn-icon">✦</span><span id="btnText">KIỂM TRA LIÊN KẾT</span><span class="arrow">→</span>
+        </button>
+        <div class="progress" id="progress" hidden><span></span></div>
+        <div id="message" class="message" role="status" aria-live="polite"></div>
+        <div id="result" class="result" hidden></div>
+      </div>
+
+      <div class="features">
+        <div><span class="feature-icon">⌁</span><b>Nhận diện link</b><small>Kiểm tra tên miền</small></div>
+        <div><span class="feature-icon">◈</span><b>API chính thức</b><small>Tích hợp theo nhà cung cấp</small></div>
+        <div><span class="feature-icon">▣</span><b>Lịch sử</b><small>Lưu trên thiết bị</small></div>
+      </div>
+    </section>
+
+    <section class="history panel">
+      <div class="history-head"><div><span class="eyebrow">RECENT ACTIVITY</span><h2>Lịch sử xử lý</h2></div><button id="clearBtn" class="text-btn" type="button">Xóa lịch sử</button></div>
+      <div id="historyList" class="history-list"><p class="empty">Chưa có hoạt động nào.</p></div>
+    </section>
+    <p class="notice">AUTO LINK PRO chỉ tích hợp API được nhà cung cấp cho phép. Công cụ không vượt CAPTCHA, quảng cáo bắt buộc, đăng nhập hoặc cơ chế xác minh.</p>
+  </main>
+  <footer>© <span id="year"></span> AUTO LINK PRO <span>•</span> BUILT FOR THE WEB</footer>
+  <script src="/script.js"></script>
+</body>
+</html>
