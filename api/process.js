@@ -7,6 +7,9 @@ import net from "node:net";
 const MAX_REDIRECTS = 8;
 const TIMEOUT_MS = 7000;
 
+const WORKER_URL = process.env.WORKER_URL;
+const WORKER_API_KEY = process.env.WORKER_API_KEY;
+
 function isPublicIPv4(ip) {
   if (net.isIP(ip) !== 4) return false;
 
@@ -116,7 +119,7 @@ function requestOnce(url, method, ip) {
       path: url.pathname + url.search,
       method,
       headers: {
-        "User-Agent": "AUTO-LINK-PRO/6.0",
+        "User-Agent": "AUTO-LINK-PRO/7.0",
         "Accept": "text/html,application/json,*/*",
         "Connection": "close"
       },
@@ -200,6 +203,49 @@ function classifyResponse(code, provider) {
   return null;
 }
 
+async function inspectWithWorker(url) {
+  if (!WORKER_URL || !WORKER_API_KEY) {
+    return {
+      status: "worker_unavailable",
+      message: "Worker chưa được cấu hình trong Vercel."
+    };
+  }
+
+  const base = WORKER_URL.replace(/\/+$/, "");
+  const endpoint = new URL("/inspect", base);
+
+  if (
+    !["https:"].includes(endpoint.protocol) ||
+    endpoint.hostname !== "auto-code-worker.onrender.com"
+  ) {
+    return {
+      status: "worker_unavailable",
+      message: "Địa chỉ Worker không hợp lệ."
+    };
+  }
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${WORKER_API_KEY}`
+    },
+    body: JSON.stringify({ url }),
+    signal: AbortSignal.timeout(25000)
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      status: "worker_unavailable",
+      message: data.message || `Worker trả về HTTP ${response.status}.`
+    };
+  }
+
+  return data;
+}
+
 async function resolveRedirects(input) {
   let current = validateUrl(input);
   const history = [];
@@ -236,12 +282,41 @@ async function resolveRedirects(input) {
     }
 
     if (result.statusCode >= 200 && result.statusCode < 300) {
+      const isSupportedProvider =
+        provider === "Link4m" || provider === "Traffic19";
+
+      if (isSupportedProvider) {
+        let workerResult;
+
+        try {
+          workerResult = await inspectWithWorker(current.href);
+        } catch {
+          workerResult = {
+            status: "worker_unavailable",
+            message: "Không thể kết nối Worker."
+          };
+        }
+
+        return {
+          status: "verification_required",
+          destination: current.href,
+          code: null,
+          worker: workerResult,
+          message:
+            workerResult.status === "manual_required"
+              ? workerResult.message
+              : workerResult.message ||
+                "Trang đã phản hồi. Chưa xác định được mã xác minh.",
+          history
+        };
+      }
+
       return {
-        status: "verification_required",
+        status: "unsupported",
         destination: current.href,
         code: null,
         message:
-          "Đã truy cập được trang. Có thể cần hoàn thành các bước xác minh trên trình duyệt.",
+          "Trang đã phản hồi thành công nhưng chưa có API chính thức để xác định mã.",
         history
       };
     }
@@ -301,7 +376,7 @@ export default async function handler(req, res) {
     const result = await resolveRedirects(url.href);
 
     return res.status(200).json({
-      version: "6.0",
+      version: "7.0",
       provider,
       originalUrl,
       code: null,
@@ -309,7 +384,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     return res.status(200).json({
-      version: "6.0",
+      version: "7.0",
       status: "unsupported",
       provider: originalUrl
         ? getProvider(new URL(originalUrl).hostname)
