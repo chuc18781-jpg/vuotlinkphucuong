@@ -1,111 +1,82 @@
-const input = document.querySelector("#urlInput");
-const processBtn = document.querySelector("#processBtn");
-const btnText = document.querySelector("#btnText");
-const message = document.querySelector("#message");
-const progress = document.querySelector("#progress");
-const result = document.querySelector("#result");
-const historyList = document.querySelector("#historyList");
-const STORAGE_KEY = "auto-link-pro-history-v1";
 
-document.querySelector("#year").textContent = new Date().getFullYear();
+const input = document.getElementById("urlInput");
+const button = document.getElementById("processBtn");
+const paste = document.getElementById("pasteBtn");
+const result = document.getElementById("result");
 
-function readHistory() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-  catch { return []; }
-}
-function saveHistory(items) { localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 12))); }
-function renderHistory() {
-  const items = readHistory();
-  historyList.innerHTML = "";
-  if (!items.length) {
-    historyList.innerHTML = '<p class="empty">Chưa có hoạt động nào.</p>';
-    return;
-  }
-  for (const item of items) {
-    const row = document.createElement("div");
-    row.className = "history-item";
-    const url = document.createElement("span");
-    url.textContent = item.url;
-    const status = document.createElement("small");
-    status.textContent = item.status;
-    row.append(url, status);
-    historyList.append(row);
-  }
-}
-function setMessage(text, type="") {
-  message.textContent = text;
-  message.className = "message " + type;
-}
-function validWebUrl(value) {
-  try {
-    const u = new URL(value);
-    return ["http:", "https:"].includes(u.protocol) && !!u.hostname;
-  } catch { return false; }
-}
-
-document.querySelector("#pasteBtn").addEventListener("click", async () => {
+paste.addEventListener("click", async () => {
   try {
     input.value = await navigator.clipboard.readText();
-    input.focus();
   } catch {
-    setMessage("Trình duyệt không cho phép đọc clipboard. Hãy dán bằng Ctrl + V.");
+    result.textContent = "Không thể đọc clipboard. Hãy dùng Ctrl + V.";
   }
 });
 
-processBtn.addEventListener("click", async () => {
+function validUrl(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+button.addEventListener("click", async () => {
   const url = input.value.trim();
-  result.hidden = true;
-  if (!validWebUrl(url)) {
-    setMessage("Vui lòng nhập một đường link HTTP hoặc HTTPS hợp lệ.", "error");
+
+  if (!validUrl(url)) {
+    result.textContent = "Vui lòng nhập link HTTP hoặc HTTPS hợp lệ.";
     return;
   }
-  processBtn.disabled = true;
-  btnText.textContent = "ĐANG KIỂM TRA...";
-  progress.hidden = false;
-  setMessage("Đang nhận diện tên miền và kiểm tra API...");
+
+  button.disabled = true;
+  button.textContent = "ĐANG KIỂM TRA...";
+  result.textContent = "Đang phân tích chuyển hướng...";
+
   try {
     const response = await fetch("/api/process", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ url })
     });
+
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Không thể xử lý yêu cầu.");
-    if (data.status === "success" && data.destination) {
-      setMessage("Đã nhận được liên kết đích từ API chính thức.", "success");
-      result.hidden = false;
-      result.replaceChildren();
-      const link = document.createElement("a");
-      link.href = data.destination;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = data.destination;
-      const copy = document.createElement("button");
-      copy.className = "copy";
-      copy.textContent = "Sao chép liên kết";
-      copy.addEventListener("click", async () => {
-        await navigator.clipboard.writeText(data.destination);
-        copy.textContent = "Đã sao chép ✓";
-      });
-      result.append(link, document.createElement("br"), copy);
-    } else {
-      setMessage(data.message || "Nhà cung cấp này chưa được hỗ trợ.", "error");
+
+    result.replaceChildren();
+
+    const message = document.createElement("p");
+    message.textContent = data.message || "Không có kết quả.";
+    result.appendChild(message);
+
+    if (data.destination) {
+      const destination = document.createElement("p");
+      destination.textContent = "Link đích: " + data.destination;
+      result.appendChild(destination);
+
+      const open = document.createElement("a");
+      open.href = data.destination;
+      open.target = "_blank";
+      open.rel = "noopener noreferrer";
+      open.textContent = "MỞ LINK ĐÍCH ↗";
+      result.appendChild(open);
     }
-    const items = readHistory();
-    items.unshift({ url, status: data.status === "success" ? "Hoàn tất" : "Chưa hỗ trợ", at: Date.now() });
-    saveHistory(items);
-    renderHistory();
+
+    if (data.history?.length) {
+      const history = document.createElement("p");
+      history.textContent = "Số bước chuyển hướng: " + data.history.length;
+      result.appendChild(history);
+    }
+
   } catch (error) {
-    setMessage(error.message || "Có lỗi xảy ra.", "error");
+    result.textContent = "Không kết nối được máy chủ. Hãy thử lại.";
   } finally {
-    progress.hidden = true;
-    processBtn.disabled = false;
-    btnText.textContent = "KIỂM TRA LIÊN KẾT";
+    button.disabled = false;
+    button.textContent = "✦ KIỂM TRA LIÊN KẾT →";
   }
 });
-input.addEventListener("keydown", e => { if (e.key === "Enter") processBtn.click(); });
-document.querySelector("#clearBtn").addEventListener("click", () => {
-  localStorage.removeItem(STORAGE_KEY);
-  renderHistory();
+
+input.addEventListener("keydown", event => {
+  if (event.key === "Enter") button.click();
 });
-renderHistory();

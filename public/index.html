@@ -1,56 +1,46 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080d1b">
-  <meta name="description" content="AUTO LINK PRO - công cụ kiểm tra và xử lý liên kết qua API chính thức.">
-  <title>AUTO LINK PRO</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AUTO LINK PRO AI</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="glow glow-a"></div><div class="glow glow-b"></div>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="AUTO LINK PRO trang chủ">
-      <span class="brand-mark">↗</span><span>AUTO LINK <b>PRO</b></span>
-    </a>
-    <span class="status"><i></i> HỆ THỐNG SẴN SÀNG</span>
+    <div class="logo">↗ AUTO LINK <span>PRO AI</span></div>
+    <div class="status">● HỆ THỐNG SẴN SÀNG</div>
   </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <div class="eyebrow"><span></span> SMART LINK PROCESSOR</div>
-      <h1>Xử lý liên kết<br><em>thông minh hơn.</em></h1>
-      <p class="sub">Dán liên kết để kiểm tra khả năng xử lý qua API chính thức của nhà cung cấp.</p>
+  <main class="container">
+    <div class="tag">✦ SMART LINK CHECKER</div>
+    <h1>Kiểm tra link <span>thông minh.</span></h1>
+    <p class="subtitle">Phân tích chuyển hướng liên kết nhanh chóng và an toàn.</p>
 
-      <div class="panel">
-        <label for="urlInput">LIÊN KẾT CỦA BẠN</label>
-        <div class="input-row">
-          <input id="urlInput" type="url" placeholder="https://example.com/your-link" autocomplete="url">
-          <button id="pasteBtn" class="paste" type="button" title="Dán từ clipboard">Dán</button>
-        </div>
-        <button id="processBtn" class="primary" type="button">
-          <span class="btn-icon">✦</span><span id="btnText">KIỂM TRA LIÊN KẾT</span><span class="arrow">→</span>
-        </button>
-        <div class="progress" id="progress" hidden><span></span></div>
-        <div id="message" class="message" role="status" aria-live="polite"></div>
-        <div id="result" class="result" hidden></div>
+    <section class="panel">
+      <label for="urlInput">NHẬP ĐƯỜNG LINK</label>
+      <div class="input-wrap">
+        <input id="urlInput" type="url"
+          placeholder="https://example.com/link">
+        <button id="pasteBtn" type="button">DÁN</button>
       </div>
-
-      <div class="features">
-        <div><span class="feature-icon">⌁</span><b>Nhận diện link</b><small>Kiểm tra tên miền</small></div>
-        <div><span class="feature-icon">◈</span><b>API chính thức</b><small>Tích hợp theo nhà cung cấp</small></div>
-        <div><span class="feature-icon">▣</span><b>Lịch sử</b><small>Lưu trên thiết bị</small></div>
-      </div>
+      <button id="processBtn" type="button">✦ KIỂM TRA LIÊN KẾT →</button>
+      <div id="result" class="result"></div>
     </section>
 
-    <section class="history panel">
-      <div class="history-head"><div><span class="eyebrow">RECENT ACTIVITY</span><h2>Lịch sử xử lý</h2></div><button id="clearBtn" class="text-btn" type="button">Xóa lịch sử</button></div>
-      <div id="historyList" class="history-list"><p class="empty">Chưa có hoạt động nào.</p></div>
+    <section class="features">
+      <article><h3>⚡ Nhanh chóng</h3><p>Kiểm tra chuyển hướng HTTP.</p></article>
+      <article><h3>🛡 An toàn</h3><p>Kiểm tra link và chặn địa chỉ nội bộ.</p></article>
+      <article><h3>◎ Minh bạch</h3><p>Hiển thị trạng thái và kết quả.</p></article>
     </section>
-    <p class="notice">AUTO LINK PRO chỉ tích hợp API được nhà cung cấp cho phép. Công cụ không vượt CAPTCHA, quảng cáo bắt buộc, đăng nhập hoặc cơ chế xác minh.</p>
+
+    <p class="notice">
+      Lưu ý: Không vượt CAPTCHA, quảng cáo bắt buộc hoặc xác minh truy cập.
+    </p>
+    <footer>© 2026 AUTO LINK PRO AI</footer>
   </main>
-  <footer>© <span id="year"></span> AUTO LINK PRO <span>•</span> BUILT FOR THE WEB</footer>
+
   <script src="/script.js"></script>
 </body>
 </html>
