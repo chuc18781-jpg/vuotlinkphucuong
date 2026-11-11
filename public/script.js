@@ -4,13 +4,44 @@ const button = document.getElementById("processBtn");
 const paste = document.getElementById("pasteBtn");
 const result = document.getElementById("result");
 
-paste.addEventListener("click", async () => {
+const STATUS = {
+  success: ["ĐÃ KIỂM TRA ĐƯỢC", "success"],
+  blocked: ["NHÀ CUNG CẤP TỪ CHỐI", "warning"],
+  not_found: ["KHÔNG TÌM THẤY LINK", "error"],
+  expired: ["LINK CÓ THỂ ĐÃ HẾT HẠN", "error"],
+  rate_limited: ["ĐANG BỊ GIỚI HẠN", "warning"],
+  provider_error: ["LỖI NHÀ CUNG CẤP", "error"],
+  unsupported: ["CHƯA XÁC ĐỊNH ĐƯỢC ĐÍCH", "warning"],
+  limit: ["VƯỢT GIỚI HẠN CHUYỂN HƯỚNG", "warning"],
+  error: ["CÓ LỖI XẢY RA", "error"]
+};
+
+function showText(tag, value) {
+  const element = document.createElement(tag);
+  element.textContent = value;
+  result.appendChild(element);
+  return element;
+}
+
+function addLink(label, url) {
+  if (!url) return;
+
   try {
-    input.value = await navigator.clipboard.readText();
+    const parsed = new URL(url);
+
+    if (!["http:", "https:"].includes(parsed.protocol)) return;
+
+    const link = document.createElement("a");
+    link.href = parsed.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = label;
+
+    result.appendChild(link);
   } catch {
-    result.textContent = "Không thể đọc clipboard. Hãy dùng Ctrl + V.";
+    // Bỏ qua URL không hợp lệ
   }
-});
+}
 
 function validUrl(value) {
   try {
@@ -21,6 +52,53 @@ function validUrl(value) {
   }
 }
 
+function renderResult(data, originalUrl) {
+  result.replaceChildren();
+
+  const status = STATUS[data.status] || STATUS.error;
+
+  showText("h3", status[0]);
+  showText("p", data.message || "Không có thông báo.");
+
+  showText("p", "Nhà cung cấp: " + (data.provider || "Không xác định"));
+
+  if (data.destination && data.status === "success") {
+    showText("p", "Địa chỉ hiện tại: " + data.destination);
+    addLink("MỞ ĐỊA CHỈ HIỆN TẠI ↗", data.destination);
+  }
+
+  // Khi chưa xác định được đích cuối, cho phép mở trang gốc.
+  if (data.status !== "success" || !data.destination) {
+    addLink("MỞ TRANG NHÀ CUNG CẤP ↗", data.originalUrl || originalUrl);
+  }
+
+  if (Array.isArray(data.history) && data.history.length) {
+    showText("h4", "LỊCH SỬ KIỂM TRA");
+
+    data.history.forEach((item, index) => {
+      const line = document.createElement("p");
+      line.textContent =
+        `${index + 1}. HTTP ${item.status} - ${item.method} - ${item.url}`;
+      result.appendChild(line);
+    });
+
+    showText("p", "Tổng số bước: " + data.history.length);
+  }
+
+  showText(
+    "p",
+    "Lưu ý: Công cụ chỉ kiểm tra chuyển hướng HTTP. Trang dùng JavaScript, CAPTCHA hoặc xác minh có thể cần mở thủ công."
+  );
+}
+
+paste.addEventListener("click", async () => {
+  try {
+    input.value = await navigator.clipboard.readText();
+  } catch {
+    result.textContent = "Không thể đọc clipboard. Hãy dùng Ctrl + V.";
+  }
+});
+
 button.addEventListener("click", async () => {
   const url = input.value.trim();
 
@@ -30,8 +108,8 @@ button.addEventListener("click", async () => {
   }
 
   button.disabled = true;
-  button.textContent = "ĐANG KIỂM TRA...";
-  result.textContent = "Đang phân tích chuyển hướng...";
+  button.textContent = "ĐANG PHÂN TÍCH...";
+  result.textContent = "Đang kiểm tra nhà cung cấp và chuyển hướng...";
 
   try {
     const response = await fetch("/api/process", {
@@ -44,33 +122,16 @@ button.addEventListener("click", async () => {
 
     const data = await response.json();
 
-    result.replaceChildren();
-
-    const message = document.createElement("p");
-    message.textContent = data.message || "Không có kết quả.";
-    result.appendChild(message);
-
-    if (data.destination) {
-      const destination = document.createElement("p");
-      destination.textContent = "Link đích: " + data.destination;
-      result.appendChild(destination);
-
-      const open = document.createElement("a");
-      open.href = data.destination;
-      open.target = "_blank";
-      open.rel = "noopener noreferrer";
-      open.textContent = "MỞ LINK ĐÍCH ↗";
-      result.appendChild(open);
+    if (!response.ok) {
+      throw new Error(data.message || `Máy chủ trả về HTTP ${response.status}`);
     }
 
-    if (data.history?.length) {
-      const history = document.createElement("p");
-      history.textContent = "Số bước chuyển hướng: " + data.history.length;
-      result.appendChild(history);
-    }
+    renderResult(data, url);
 
   } catch (error) {
-    result.textContent = "Không kết nối được máy chủ. Hãy thử lại.";
+    result.replaceChildren();
+    showText("h3", "KHÔNG KẾT NỐI ĐƯỢC");
+    showText("p", error.message || "Không thể kết nối máy chủ.");
   } finally {
     button.disabled = false;
     button.textContent = "✦ KIỂM TRA LIÊN KẾT →";
