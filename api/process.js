@@ -35,14 +35,22 @@ function getProvider(hostname) {
   const host = hostname.toLowerCase();
 
   const providers = [
-    { name: "Link4m", domains: ["link4m.org", "link4m.com", "link4m.co"] },
-    { name: "Traffic19", domains: ["traffic19.com"] }
+    {
+      name: "Link4m",
+      domains: ["link4m.org", "link4m.com", "link4m.co"]
+    },
+    {
+      name: "Traffic19",
+      domains: ["traffic19.com"]
+    }
   ];
 
   for (const provider of providers) {
     if (provider.domains.some(domain =>
       host === domain || host.endsWith("." + domain)
-    )) return provider.name;
+    )) {
+      return provider.name;
+    }
   }
 
   if (host === "bit.ly") return "Bitly";
@@ -119,7 +127,7 @@ function requestOnce(url, method, ip) {
       path: url.pathname + url.search,
       method,
       headers: {
-        "User-Agent": "AUTO-LINK-PRO/7.0",
+        "User-Agent": "AUTO-LINK-PRO/8.0",
         "Accept": "text/html,application/json,*/*",
         "Connection": "close"
       },
@@ -153,6 +161,7 @@ function requestOnce(url, method, ip) {
 
 async function checkUrl(url) {
   const ip = await getPublicIP(url.hostname);
+
   let result = await requestOnce(url, "HEAD", ip);
   let method = "HEAD";
 
@@ -162,45 +171,6 @@ async function checkUrl(url) {
   }
 
   return { ...result, method };
-}
-
-function classifyResponse(code, provider) {
-  if (code === 401 || code === 403) {
-    return {
-      status: "blocked",
-      message: `Nhà cung cấp ${provider} từ chối yêu cầu kiểm tra tự động.`
-    };
-  }
-
-  if (code === 404) {
-    return {
-      status: "unsupported",
-      message: "Không tìm thấy đường dẫn."
-    };
-  }
-
-  if (code === 410) {
-    return {
-      status: "unsupported",
-      message: "Đường dẫn có thể đã hết hạn hoặc bị gỡ."
-    };
-  }
-
-  if (code === 429) {
-    return {
-      status: "blocked",
-      message: "Nhà cung cấp đang giới hạn số lượng yêu cầu."
-    };
-  }
-
-  if (code >= 500) {
-    return {
-      status: "unsupported",
-      message: `Máy chủ nhà cung cấp gặp lỗi HTTP ${code}.`
-    };
-  }
-
-  return null;
 }
 
 async function inspectWithWorker(url) {
@@ -215,7 +185,7 @@ async function inspectWithWorker(url) {
   const endpoint = new URL("/inspect", base);
 
   if (
-    !["https:"].includes(endpoint.protocol) ||
+    endpoint.protocol !== "https:" ||
     endpoint.hostname !== "auto-code-worker.onrender.com"
   ) {
     return {
@@ -260,13 +230,56 @@ async function resolveRedirects(input) {
       method: result.method
     });
 
-    const failure = classifyResponse(result.statusCode, provider);
-
-    if (failure) {
+    // HTTP 403: chuyển sang thao tác thủ công.
+    if (result.statusCode === 401 || result.statusCode === 403) {
       return {
-        ...failure,
+        status: "manual_required",
+        destination: current.href,
+        code: null,
+        message:
+          `Nhà cung cấp ${provider} không cho phép kiểm tra tự động. ` +
+          "Bạn có thể mở trang để tiếp tục trực tiếp.",
+        history
+      };
+    }
+
+    if (result.statusCode === 429) {
+      return {
+        status: "blocked",
+        destination: current.href,
+        code: null,
+        message:
+          "Nhà cung cấp đang giới hạn yêu cầu. Vui lòng thử lại sau.",
+        history
+      };
+    }
+
+    if (result.statusCode === 404) {
+      return {
+        status: "unsupported",
         destination: null,
         code: null,
+        message: "Không tìm thấy đường dẫn.",
+        history
+      };
+    }
+
+    if (result.statusCode === 410) {
+      return {
+        status: "unsupported",
+        destination: null,
+        code: null,
+        message: "Đường dẫn có thể đã hết hạn hoặc bị gỡ.",
+        history
+      };
+    }
+
+    if (result.statusCode >= 500) {
+      return {
+        status: "unsupported",
+        destination: null,
+        code: null,
+        message: `Máy chủ nhà cung cấp gặp lỗi HTTP ${result.statusCode}.`,
         history
       };
     }
@@ -282,12 +295,12 @@ async function resolveRedirects(input) {
     }
 
     if (result.statusCode >= 200 && result.statusCode < 300) {
-      const isSupportedProvider =
+      const supported =
         provider === "Link4m" || provider === "Traffic19";
 
-      if (isSupportedProvider) {
-        let workerResult;
+      let workerResult = null;
 
+      if (supported) {
         try {
           workerResult = await inspectWithWorker(current.href);
         } catch {
@@ -296,27 +309,17 @@ async function resolveRedirects(input) {
             message: "Không thể kết nối Worker."
           };
         }
-
-        return {
-          status: "verification_required",
-          destination: current.href,
-          code: null,
-          worker: workerResult,
-          message:
-            workerResult.status === "manual_required"
-              ? workerResult.message
-              : workerResult.message ||
-                "Trang đã phản hồi. Chưa xác định được mã xác minh.",
-          history
-        };
       }
 
       return {
-        status: "unsupported",
+        status: "verification_required",
         destination: current.href,
         code: null,
+        worker: workerResult,
         message:
-          "Trang đã phản hồi thành công nhưng chưa có API chính thức để xác định mã.",
+          workerResult?.status === "manual_required"
+            ? workerResult.message
+            : "Trang đã phản hồi. Nếu cần xác minh, hãy tiếp tục trực tiếp trên trang nhà cung cấp.",
         history
       };
     }
@@ -345,6 +348,7 @@ export default async function handler(req, res) {
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+
     return res.status(405).json({
       status: "unsupported",
       message: "Chỉ hỗ trợ phương thức POST."
@@ -376,15 +380,16 @@ export default async function handler(req, res) {
     const result = await resolveRedirects(url.href);
 
     return res.status(200).json({
-      version: "7.0",
+      version: "8.0",
       provider,
       originalUrl,
       code: null,
       ...result
     });
+
   } catch (error) {
     return res.status(200).json({
-      version: "7.0",
+      version: "8.0",
       status: "unsupported",
       provider: originalUrl
         ? getProvider(new URL(originalUrl).hostname)
