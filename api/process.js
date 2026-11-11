@@ -13,15 +13,18 @@ function isPublicIPv4(ip) {
   const p = ip.split(".").map(Number);
   const [a, b] = p;
 
-  if (a === 0 || a === 10 || a === 127 || a >= 224) return false;
-  if (a === 100 && b >= 64 && b <= 127) return false;
-  if (a === 169 && b === 254) return false;
-  if (a === 172 && b >= 16 && b <= 31) return false;
-  if (a === 192 && b === 168) return false;
-  if (a === 192 && b === 0) return false;
-  if (a === 198 && (b === 18 || b === 19)) return false;
-  if (a === 198 && b === 51 && p[2] === 100) return false;
-  if (a === 203 && b === 0 && p[2] === 113) return false;
+  if (
+    a === 0 || a === 10 || a === 127 || a >= 224 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 0) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    (a === 198 && b === 51 && p[2] === 100) ||
+    (a === 203 && b === 0 && p[2] === 113)
+  ) return false;
+
   return true;
 }
 
@@ -29,28 +32,44 @@ function getProvider(hostname) {
   const host = hostname.toLowerCase();
 
   const providers = [
-    {
-      name: "Link4m",
-      domains: ["link4m.org", "link4m.com", "link4m.co"]
-    },
-    {
-      name: "Traffic19",
-      domains: ["traffic19.com"]
-    }
+    { name: "Link4m", domains: ["link4m.org", "link4m.com", "link4m.co"] },
+    { name: "Traffic19", domains: ["traffic19.com"] }
   ];
 
   for (const provider of providers) {
     if (provider.domains.some(domain =>
       host === domain || host.endsWith("." + domain)
-    )) {
-      return provider.name;
-    }
+    )) return provider.name;
   }
 
-  if (host === "bit.ly" || host.endsWith(".bit.ly")) return "Bitly";
-  if (host === "tinyurl.com" || host.endsWith(".tinyurl.com")) return "TinyURL";
+  if (host === "bit.ly") return "Bitly";
+  if (host === "tinyurl.com") return "TinyURL";
 
   return "Không xác định";
+}
+
+function validateUrl(value) {
+  let url;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("Đường dẫn không hợp lệ.");
+  }
+
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Chỉ hỗ trợ HTTP và HTTPS.");
+  }
+
+  if (url.username || url.password) {
+    throw new Error("URL chứa thông tin đăng nhập không được hỗ trợ.");
+  }
+
+  if (!url.hostname || url.hostname.includes(":")) {
+    throw new Error("Tên miền hoặc IP không hợp lệ.");
+  }
+
+  return url;
 }
 
 async function getPublicIP(hostname) {
@@ -79,44 +98,15 @@ async function getPublicIP(hostname) {
     isPublicIPv4(record.address)
   );
 
-  if (publicRecords.length === 0) {
+  if (!publicRecords.length) {
     throw new Error("Không tìm thấy IP IPv4 công khai.");
   }
 
   return publicRecords[0].address;
 }
 
-function validateUrl(value) {
-  let url;
-
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error("Đường dẫn không hợp lệ.");
-  }
-
-  if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error("Chỉ hỗ trợ HTTP và HTTPS.");
-  }
-
-  if (url.username || url.password) {
-    throw new Error("URL chứa thông tin đăng nhập không được hỗ trợ.");
-  }
-
-  if (!url.hostname || url.hostname.includes(":")) {
-    throw new Error("Tên miền hoặc địa chỉ IP không hợp lệ.");
-  }
-
-  return url;
-}
-
 function requestOnce(url, method, ip) {
   return new Promise((resolve, reject) => {
-    if (!ip || net.isIP(ip) !== 4) {
-      reject(new Error("Địa chỉ IPv4 không hợp lệ."));
-      return;
-    }
-
     const client = url.protocol === "https:" ? https : http;
 
     const request = client.request({
@@ -126,12 +116,12 @@ function requestOnce(url, method, ip) {
       path: url.pathname + url.search,
       method,
       headers: {
-        "User-Agent": "Mozilla/5.0 AUTO-LINK-PRO/4.3",
-        "Accept": "*/*",
+        "User-Agent": "AUTO-LINK-PRO/6.0",
+        "Accept": "text/html,application/json,*/*",
         "Connection": "close"
       },
       lookup: (_hostname, options, callback) => {
-        if (options && options.all) {
+        if (options?.all) {
           callback(null, [{ address: ip, family: 4 }]);
         } else {
           callback(null, ip, 4);
@@ -140,7 +130,8 @@ function requestOnce(url, method, ip) {
     }, response => {
       const result = {
         statusCode: response.statusCode || 0,
-        location: response.headers.location || null
+        location: response.headers.location || null,
+        contentType: response.headers["content-type"] || ""
       };
 
       response.resume();
@@ -170,11 +161,51 @@ async function checkUrl(url) {
   return { ...result, method };
 }
 
+function classifyResponse(code, provider) {
+  if (code === 401 || code === 403) {
+    return {
+      status: "blocked",
+      message: `Nhà cung cấp ${provider} từ chối yêu cầu kiểm tra tự động.`
+    };
+  }
+
+  if (code === 404) {
+    return {
+      status: "unsupported",
+      message: "Không tìm thấy đường dẫn."
+    };
+  }
+
+  if (code === 410) {
+    return {
+      status: "unsupported",
+      message: "Đường dẫn có thể đã hết hạn hoặc bị gỡ."
+    };
+  }
+
+  if (code === 429) {
+    return {
+      status: "blocked",
+      message: "Nhà cung cấp đang giới hạn số lượng yêu cầu."
+    };
+  }
+
+  if (code >= 500) {
+    return {
+      status: "unsupported",
+      message: `Máy chủ nhà cung cấp gặp lỗi HTTP ${code}.`
+    };
+  }
+
+  return null;
+}
+
 async function resolveRedirects(input) {
   let current = validateUrl(input);
   const history = [];
 
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    const provider = getProvider(current.hostname);
     const result = await checkUrl(current);
 
     history.push({
@@ -183,55 +214,19 @@ async function resolveRedirects(input) {
       method: result.method
     });
 
-    const code = result.statusCode;
+    const failure = classifyResponse(result.statusCode, provider);
 
-    if (code === 403 || code === 401) {
+    if (failure) {
       return {
-        status: "blocked",
+        ...failure,
         destination: null,
-        message: `Máy chủ từ chối kiểm tra tự động (HTTP ${code}). Bạn có thể mở link gốc bằng trình duyệt.`,
-        history
-      };
-    }
-
-    if (code === 404) {
-      return {
-        status: "not_found",
-        destination: null,
-        message: "Không tìm thấy đường dẫn (HTTP 404).",
-        history
-      };
-    }
-
-    if (code === 410) {
-      return {
-        status: "expired",
-        destination: null,
-        message: "Máy chủ báo liên kết đã bị gỡ hoặc hết hạn (HTTP 410).",
-        history
-      };
-    }
-
-    if (code === 429) {
-      return {
-        status: "rate_limited",
-        destination: null,
-        message: "Máy chủ đang giới hạn yêu cầu (HTTP 429).",
-        history
-      };
-    }
-
-    if (code >= 500) {
-      return {
-        status: "provider_error",
-        destination: null,
-        message: `Máy chủ nhà cung cấp đang gặp lỗi (HTTP ${code}).`,
+        code: null,
         history
       };
     }
 
     if (
-      [301, 302, 303, 307, 308].includes(code) &&
+      [301, 302, 303, 307, 308].includes(result.statusCode) &&
       result.location
     ) {
       current = validateUrl(
@@ -240,11 +235,13 @@ async function resolveRedirects(input) {
       continue;
     }
 
-    if (code >= 200 && code < 300) {
+    if (result.statusCode >= 200 && result.statusCode < 300) {
       return {
-        status: "success",
+        status: "verification_required",
         destination: current.href,
-        message: "Đã truy cập được địa chỉ hiện tại. Nếu trang dùng chuyển hướng bằng JavaScript, chưa chắc đây là đích cuối.",
+        code: null,
+        message:
+          "Đã truy cập được trang. Có thể cần hoàn thành các bước xác minh trên trình duyệt.",
         history
       };
     }
@@ -252,14 +249,16 @@ async function resolveRedirects(input) {
     return {
       status: "unsupported",
       destination: null,
-      message: `Không thể xác định link đích. HTTP ${code}.`,
+      code: null,
+      message: `Không xác định được kết quả. HTTP ${result.statusCode}.`,
       history
     };
   }
 
   return {
-    status: "limit",
+    status: "unsupported",
     destination: null,
+    code: null,
     message: "Đã vượt quá giới hạn chuyển hướng.",
     history
   };
@@ -267,11 +266,12 @@ async function resolveRedirects(input) {
 
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({
-      status: "error",
+      status: "unsupported",
       message: "Chỉ hỗ trợ phương thức POST."
     });
   }
@@ -289,7 +289,7 @@ export default async function handler(req, res) {
       body.url.length > 2048
     ) {
       return res.status(400).json({
-        status: "error",
+        status: "unsupported",
         message: "Vui lòng nhập link hợp lệ."
       });
     }
@@ -301,21 +301,22 @@ export default async function handler(req, res) {
     const result = await resolveRedirects(url.href);
 
     return res.status(200).json({
-      version: "4.3",
+      version: "6.0",
       provider,
       originalUrl,
+      code: null,
       ...result
     });
-
   } catch (error) {
     return res.status(200).json({
-      version: "4.3",
-      status: "error",
+      version: "6.0",
+      status: "unsupported",
       provider: originalUrl
         ? getProvider(new URL(originalUrl).hostname)
         : "Không xác định",
       originalUrl,
       destination: null,
+      code: null,
       message: error.message || "Có lỗi khi xử lý liên kết.",
       history: []
     });

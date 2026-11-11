@@ -5,15 +5,11 @@ const paste = document.getElementById("pasteBtn");
 const result = document.getElementById("result");
 
 const STATUS = {
-  success: ["ĐÃ KIỂM TRA ĐƯỢC", "success"],
+  success: ["KIỂM TRA THÀNH CÔNG", "success"],
   blocked: ["NHÀ CUNG CẤP TỪ CHỐI", "warning"],
-  not_found: ["KHÔNG TÌM THẤY LINK", "error"],
-  expired: ["LINK CÓ THỂ ĐÃ HẾT HẠN", "error"],
-  rate_limited: ["ĐANG BỊ GIỚI HẠN", "warning"],
-  provider_error: ["LỖI NHÀ CUNG CẤP", "error"],
-  unsupported: ["CHƯA XÁC ĐỊNH ĐƯỢC ĐÍCH", "warning"],
-  limit: ["VƯỢT GIỚI HẠN CHUYỂN HƯỚNG", "warning"],
-  error: ["CÓ LỖI XẢY RA", "error"]
+  verification_required: ["CẦN XÁC MINH", "warning"],
+  code_available: ["ĐÃ CÓ MÃ", "success"],
+  unsupported: ["CHƯA HỖ TRỢ", "error"]
 };
 
 function showText(tag, value) {
@@ -28,7 +24,6 @@ function addLink(label, url) {
 
   try {
     const parsed = new URL(url);
-
     if (!["http:", "https:"].includes(parsed.protocol)) return;
 
     const link = document.createElement("a");
@@ -36,11 +31,8 @@ function addLink(label, url) {
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.textContent = label;
-
     result.appendChild(link);
-  } catch {
-    // Bỏ qua URL không hợp lệ
-  }
+  } catch {}
 }
 
 function validUrl(value) {
@@ -52,34 +44,60 @@ function validUrl(value) {
   }
 }
 
+async function copyCode(code, buttonElement) {
+  try {
+    await navigator.clipboard.writeText(code);
+    buttonElement.textContent = "ĐÃ SAO CHÉP";
+  } catch {
+    buttonElement.textContent = "KHÔNG THỂ SAO CHÉP";
+  }
+}
+
 function renderResult(data, originalUrl) {
   result.replaceChildren();
 
-  const status = STATUS[data.status] || STATUS.error;
+  const status = STATUS[data.status] || STATUS.unsupported;
 
   showText("h3", status[0]);
   showText("p", data.message || "Không có thông báo.");
-
   showText("p", "Nhà cung cấp: " + (data.provider || "Không xác định"));
 
-  if (data.destination && data.status === "success") {
+  if (data.destination) {
     showText("p", "Địa chỉ hiện tại: " + data.destination);
-    addLink("MỞ ĐỊA CHỈ HIỆN TẠI ↗", data.destination);
+    addLink("MỞ ĐỊA CHỈ ↗", data.destination);
   }
 
-  // Khi chưa xác định được đích cuối, cho phép mở trang gốc.
-  if (data.status !== "success" || !data.destination) {
-    addLink("MỞ TRANG NHÀ CUNG CẤP ↗", data.originalUrl || originalUrl);
+  if (data.status === "code_available" && data.code) {
+    showText("h4", "MÃ XÁC MINH");
+    const code = showText("p", data.code);
+    code.className = "verification-code";
+
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.textContent = "SAO CHÉP MÃ";
+    copy.addEventListener("click", () => copyCode(data.code, copy));
+    result.appendChild(copy);
+  }
+
+  if (
+    data.status === "blocked" ||
+    data.status === "verification_required" ||
+    data.status === "unsupported"
+  ) {
+    addLink(
+      "MỞ TRANG NHÀ CUNG CẤP ↗",
+      data.originalUrl || originalUrl
+    );
   }
 
   if (Array.isArray(data.history) && data.history.length) {
     showText("h4", "LỊCH SỬ KIỂM TRA");
 
     data.history.forEach((item, index) => {
-      const line = document.createElement("p");
-      line.textContent =
-        `${index + 1}. HTTP ${item.status} - ${item.method} - ${item.url}`;
-      result.appendChild(line);
+      showText(
+        "p",
+        `${index + 1}. HTTP ${item.status} - ${item.method} - ${item.url}`
+      );
     });
 
     showText("p", "Tổng số bước: " + data.history.length);
@@ -87,7 +105,7 @@ function renderResult(data, originalUrl) {
 
   showText(
     "p",
-    "Lưu ý: Công cụ chỉ kiểm tra chuyển hướng HTTP. Trang dùng JavaScript, CAPTCHA hoặc xác minh có thể cần mở thủ công."
+    "Mã chỉ được hiển thị khi có nguồn cung cấp hợp lệ. Công cụ không tự vượt CAPTCHA hoặc xác minh bắt buộc."
   );
 }
 
@@ -109,25 +127,22 @@ button.addEventListener("click", async () => {
 
   button.disabled = true;
   button.textContent = "ĐANG PHÂN TÍCH...";
-  result.textContent = "Đang kiểm tra nhà cung cấp và chuyển hướng...";
+  result.textContent = "Đang nhận diện nhà cung cấp...";
 
   try {
     const response = await fetch("/api/process", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || `Máy chủ trả về HTTP ${response.status}`);
+      throw new Error(data.message || `HTTP ${response.status}`);
     }
 
     renderResult(data, url);
-
   } catch (error) {
     result.replaceChildren();
     showText("h3", "KHÔNG KẾT NỐI ĐƯỢC");
