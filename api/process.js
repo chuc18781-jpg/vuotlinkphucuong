@@ -4,8 +4,11 @@ import https from "node:https";
 import dns from "node:dns/promises";
 import net from "node:net";
 
+const VERSION = "4.0";
 const MAX_REDIRECTS = 8;
 const TIMEOUT_MS = 7000;
+
+const REDIRECT_CODES = [301, 302, 303, 307, 308];
 
 function isPublicIPv4(ip) {
   if (net.isIP(ip) !== 4) return false;
@@ -17,7 +20,9 @@ function isPublicIPv4(ip) {
   )) return false;
 
   return !(
-    a === 0 || a === 10 || a === 127 ||
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
     (a === 100 && b >= 64 && b <= 127) ||
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
@@ -31,14 +36,26 @@ function isPublicIPv4(ip) {
 }
 
 function getProvider(hostname) {
-  const host = hostname.toLowerCase();
+  const host = hostname.toLowerCase().replace(/\.$/, "");
 
-  if (host === "link4m.org" || host.endsWith(".link4m.org")) {
+  const domains = [
+    "link4m.org",
+    "link4m.com",
+    "link4m.co"
+  ];
+
+  if (domains.some(
+    domain => host === domain || host.endsWith("." + domain)
+  )) {
     return "Link4m";
   }
 
-  if (host === "link4m.com" || host.endsWith(".link4m.com")) {
-    return "Link4m";
+  if (host === "bit.ly" || host.endsWith(".bit.ly")) {
+    return "Bitly";
+  }
+
+  if (host === "tinyurl.com" || host.endsWith(".tinyurl.com")) {
+    return "TinyURL";
   }
 
   return "Unknown";
@@ -49,6 +66,7 @@ async function getPublicIP(hostname) {
     if (!isPublicIPv4(hostname)) {
       throw new Error("Địa chỉ IP không công khai.");
     }
+
     return hostname;
   }
 
@@ -65,10 +83,20 @@ async function getPublicIP(hostname) {
     verbatim: true
   });
 
-  const record = records.find(r => isPublicIPv4(r.address));
+  if (
+    records.some(record =>
+      net.isIP(record.address) === 6
+    )
+  ) {
+    throw new Error("Tên miền có IPv6; yêu cầu kiểm tra an toàn bổ sung.");
+  }
+
+  const record = records.find(
+    item => isPublicIPv4(item.address)
+  );
 
   if (!record) {
-    throw new Error("Không tìm thấy IP công khai.");
+    throw new Error("Không tìm thấy IP công khai hợp lệ.");
   }
 
   return record.address;
@@ -100,7 +128,8 @@ function validateUrl(raw) {
 
 async function requestOnce(url, method) {
   const ip = await getPublicIP(url.hostname);
-  const transport = url.protocol === "https:" ? https : http;
+  const transport =
+    url.protocol === "https:" ? https : http;
 
   return new Promise((resolve, reject) => {
     const req = transport.request(url, {
@@ -119,8 +148,8 @@ async function requestOnce(url, method) {
       },
 
       headers: {
-        "User-Agent": "AUTO-LINK-PRO/3.0",
-        "Accept": "*/*"
+        "User-Agent": "AUTO-LINK-PRO/4.0",
+        "Accept": "text/html,application/xhtml+xml,*/*"
       }
     }, response => {
       const result = {
@@ -134,7 +163,9 @@ async function requestOnce(url, method) {
     });
 
     req.on("timeout", () => {
-      req.destroy(new Error("Máy chủ phản hồi quá lâu."));
+      req.destroy(
+        new Error("Máy chủ phản hồi quá lâu.")
+      );
     });
 
     req.on("error", reject);
@@ -156,30 +187,41 @@ async function resolveRedirects(startUrl) {
   let current = startUrl;
   const history = [];
 
+  const provider = getProvider(startUrl.hostname);
+
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
     const result = await checkUrl(current);
 
     history.push({
+      step: i + 1,
       url: current.toString(),
       status: result.statusCode,
       method: result.method
     });
 
-    const redirects = [301, 302, 303, 307, 308];
-
-    if (redirects.includes(result.statusCode)) {
+    if (REDIRECT_CODES.includes(result.statusCode)) {
       if (!result.location) {
         return {
           status: "incomplete",
           httpCode: result.statusCode,
           destination: null,
+          provider,
+          canResolve: false,
           message: "Máy chủ không cung cấp địa chỉ chuyển hướng.",
           history
         };
       }
 
       if (i === MAX_REDIRECTS) {
-        throw new Error("Vượt quá 8 lần chuyển hướng.");
+        return {
+          status: "limit_reached",
+          httpCode: result.statusCode,
+          destination: null,
+          provider,
+          canResolve: false,
+          message: "Đã đạt giới hạn 8 lần chuyển hướng.",
+          history
+        };
       }
 
       current = validateUrl(
@@ -190,17 +232,17 @@ async function resolveRedirects(startUrl) {
     }
 
     if ([401, 403, 429].includes(result.statusCode)) {
-      const provider = getProvider(current.hostname);
+      let message;
 
-      let message = "Máy chủ từ chối hoặc giới hạn truy cập.";
-
-      if (provider === "Link4m" && result.statusCode === 403) {
+      if (result.statusCode === 403 && provider === "Link4m") {
         message =
-          "Link4m trả HTTP 403. Máy chủ không cho phép yêu cầu kiểm tra tự động này. Hãy mở link bằng trình duyệt thông thường.";
+          "Link4m trả HTTP 403. Máy chủ từ chối yêu cầu tự động. Hãy mở link bằng trình duyệt thông thường.";
       } else if (result.statusCode === 429) {
-        message = "Máy chủ giới hạn số lượng yêu cầu.";
-      } else if (result.statusCode === 401) {
-        message = "Máy chủ yêu cầu xác thực.";
+        message =
+          "Máy chủ đang giới hạn số lượng yêu cầu.";
+      } else {
+        message =
+          "Máy chủ yêu cầu xác thực hoặc từ chối truy cập.";
       }
 
       return {
@@ -208,21 +250,24 @@ async function resolveRedirects(startUrl) {
         httpCode: result.statusCode,
         destination: null,
         provider,
-        message,
         canResolve: false,
+        message,
         history
       };
     }
 
-    if (result.statusCode >= 200 && result.statusCode < 300) {
+    if (
+      result.statusCode >= 200 &&
+      result.statusCode < 300
+    ) {
       return {
         status: "success",
         httpCode: result.statusCode,
-        method: result.method,
         destination: current.toString(),
-        provider: getProvider(startUrl.hostname),
-        message: "Đã kiểm tra được địa chỉ cuối của chuyển hướng HTTP.",
+        provider,
         canResolve: true,
+        message:
+          "Đã xác định địa chỉ cuối qua chuyển hướng HTTP công khai.",
         history
       };
     }
@@ -231,9 +276,10 @@ async function resolveRedirects(startUrl) {
       status: "unsupported",
       httpCode: result.statusCode,
       destination: null,
-      provider: getProvider(startUrl.hostname),
-      message: "Không tìm thấy chuyển hướng HTTP công khai.",
+      provider,
       canResolve: false,
+      message:
+        "Không tìm thấy chuyển hướng HTTP công khai.",
       history
     };
   }
@@ -242,13 +288,20 @@ async function resolveRedirects(startUrl) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader(
+    "Content-Type",
+    "application/json; charset=utf-8"
+  );
+
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+
     return res.status(405).json({
-      error: "Chỉ hỗ trợ POST."
+      version: VERSION,
+      status: "error",
+      message: "Chỉ hỗ trợ POST."
     });
   }
 
@@ -257,8 +310,9 @@ export default async function handler(req, res) {
 
     if (!raw || raw.length > 2048) {
       return res.status(400).json({
+        version: VERSION,
         status: "error",
-        error: "Link không hợp lệ hoặc quá dài."
+        message: "Link không hợp lệ hoặc quá dài."
       });
     }
 
@@ -266,16 +320,17 @@ export default async function handler(req, res) {
     const result = await resolveRedirects(url);
 
     return res.status(200).json({
-      version: "3.0",
+      version: VERSION,
       input: url.toString(),
       ...result
     });
 
   } catch (error) {
     return res.status(400).json({
-      version: "3.0",
+      version: VERSION,
       status: "error",
-      error: error.message || "Không thể xử lý link."
+      message:
+        error.message || "Không thể xử lý đường link."
     });
   }
 }
