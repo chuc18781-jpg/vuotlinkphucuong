@@ -13,7 +13,11 @@ function isPublicIPv4(ip) {
   const p = ip.split(".").map(Number);
   const [a, b] = p;
 
-  if (a === 0 || a === 10 || a === 127 || a >= 224) return false;
+  if (
+    a === 0 || a === 10 || a === 127 ||
+    a >= 224 || a === 255
+  ) return false;
+
   if (a === 100 && b >= 64 && b <= 127) return false;
   if (a === 169 && b === 254) return false;
   if (a === 172 && b >= 16 && b <= 31) return false;
@@ -22,7 +26,6 @@ function isPublicIPv4(ip) {
   if (a === 198 && (b === 18 || b === 19)) return false;
   if (a === 198 && b === 51 && p[2] === 100) return false;
   if (a === 203 && b === 0 && p[2] === 113) return false;
-  if (a === 255) return false;
 
   return true;
 }
@@ -31,12 +34,8 @@ function getProvider(hostname) {
   const host = hostname.toLowerCase();
 
   if (
-    host === "link4m.org" ||
-    host.endsWith(".link4m.org") ||
-    host === "link4m.com" ||
-    host.endsWith(".link4m.com") ||
-    host === "link4m.co" ||
-    host.endsWith(".link4m.co")
+    ["link4m.org", "link4m.com", "link4m.co"]
+      .some(domain => host === domain || host.endsWith("." + domain))
   ) return "Link4m";
 
   if (host === "bit.ly" || host.endsWith(".bit.ly")) {
@@ -68,11 +67,12 @@ async function getPublicIP(hostname) {
 
   const records = await dns.lookup(hostname, {
     all: true,
-    verbatim: true
+    verbatim: true,
+    family: 4
   });
 
-  const publicRecords = records.filter(
-    record => isPublicIPv4(record.address)
+  const publicRecords = records.filter(record =>
+    isPublicIPv4(record.address)
   );
 
   if (publicRecords.length === 0) {
@@ -108,6 +108,11 @@ function validateUrl(value) {
 
 function requestOnce(url, method, ip) {
   return new Promise((resolve, reject) => {
+    if (!ip || net.isIP(ip) !== 4) {
+      reject(new Error("Địa chỉ IPv4 không hợp lệ."));
+      return;
+    }
+
     const client = url.protocol === "https:" ? https : http;
 
     const request = client.request({
@@ -117,12 +122,16 @@ function requestOnce(url, method, ip) {
       path: url.pathname + url.search,
       method,
       headers: {
-        "User-Agent": "Mozilla/5.0 AUTO-LINK-PRO/4.0",
+        "User-Agent": "Mozilla/5.0 AUTO-LINK-PRO/4.2",
         "Accept": "*/*",
         "Connection": "close"
       },
-      lookup: (_hostname, _options, callback) => {
-        callback(null, ip, 4);
+      lookup: (_hostname, options, callback) => {
+        if (options && options.all) {
+          callback(null, [{ address: ip, family: 4 }]);
+        } else {
+          callback(null, ip, 4);
+        }
       }
     }, response => {
       const result = {
@@ -149,7 +158,7 @@ async function checkUrl(url) {
 
   let result = await requestOnce(url, "HEAD", ip);
 
-  if (result.statusCode === 405 || result.statusCode === 501) {
+  if ([405, 501].includes(result.statusCode)) {
     result = await requestOnce(url, "GET", ip);
   }
 
@@ -161,8 +170,7 @@ async function resolveRedirects(input) {
   const history = [];
 
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    const ip = await getPublicIP(current.hostname);
-    const result = await requestOnce(current, "HEAD", ip);
+    const result = await checkUrl(current);
 
     history.push({
       url: current.href,
@@ -170,24 +178,12 @@ async function resolveRedirects(input) {
       method: "HEAD"
     });
 
-    if ([405, 501].includes(result.statusCode)) {
-      const retry = await requestOnce(current, "GET", ip);
-
-      history.push({
-        url: current.href,
-        status: retry.statusCode,
-        method: "GET"
-      });
-
-      result.statusCode = retry.statusCode;
-      result.location = retry.location;
-    }
-
     if ([401, 403, 429].includes(result.statusCode)) {
       return {
         status: "blocked",
         destination: null,
-        message: `Máy chủ từ chối yêu cầu kiểm tra tự động (HTTP ${result.statusCode}). Hãy mở link bằng trình duyệt thông thường.`,
+        message:
+          `Máy chủ từ chối yêu cầu kiểm tra tự động (HTTP ${result.statusCode}). Hãy mở link bằng trình duyệt thông thường.`,
         history
       };
     }
@@ -232,6 +228,7 @@ export default async function handler(req, res) {
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+
     return res.status(405).json({
       status: "error",
       message: "Chỉ hỗ trợ phương thức POST."
@@ -252,7 +249,7 @@ export default async function handler(req, res) {
     ) {
       return res.status(400).json({
         status: "error",
-        message: "Vui lòng nhập một đường link hợp lệ."
+        message: "Vui lòng nhập link hợp lệ."
       });
     }
 
@@ -261,14 +258,14 @@ export default async function handler(req, res) {
     const result = await resolveRedirects(url.href);
 
     return res.status(200).json({
-      version: "4.1",
+      version: "4.2",
       provider,
       ...result
     });
 
   } catch (error) {
     return res.status(200).json({
-      version: "4.1",
+      version: "4.2",
       status: "error",
       destination: null,
       message: error.message || "Có lỗi khi xử lý liên kết.",
