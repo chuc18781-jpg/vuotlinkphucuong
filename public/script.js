@@ -228,16 +228,18 @@ function renderResult(data, originalUrl) {
       copyKeywordButton.textContent = "SAO CHÉP TỪ KHÓA";
       copyKeywordButton.addEventListener("click", () => copyText(keyword, copyKeywordButton));
       result.appendChild(copyKeywordButton);
-      try {
-        if (!navigator.clipboard || !window.isSecureContext) {
-          throw new Error("Clipboard API không khả dụng");
+      (async () => {
+        try {
+          if (!navigator.clipboard || !window.isSecureContext) {
+            throw new Error("Clipboard API không khả dụng");
+          }
+          await navigator.clipboard.writeText(keyword);
+          copyKeywordStatus.textContent = "✓ Đã tự động sao chép từ khóa tìm kiếm.";
+          copyKeywordButton.textContent = "SAO CHÉP LẠI TỪ KHÓA";
+        } catch {
+          copyKeywordStatus.textContent = "Trình duyệt chặn sao chép tự động. Hãy bấm nút “SAO CHÉP TỪ KHÓA”.";
         }
-        await navigator.clipboard.writeText(keyword);
-        copyKeywordStatus.textContent = "✓ Đã tự động sao chép từ khóa tìm kiếm.";
-        copyKeywordButton.textContent = "SAO CHÉP LẠI TỪ KHÓA";
-      } catch {
-        copyKeywordStatus.textContent = "Trình duyệt chặn sao chép tự động. Hãy bấm nút “SAO CHÉP TỪ KHÓA”.";
-      }
+      })();
 
       const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(keyword);
       addLink("XEM KẾT QUẢ GOOGLE ĐƯỢC XẾP HẠNG ↗", searchUrl);
