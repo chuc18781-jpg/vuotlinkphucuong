@@ -536,7 +536,7 @@ button.addEventListener("click", async () => {
 
     // Nhận diện nhà cung cấp từ phản hồi API; dự phòng đọc hostname của link gốc
     // để xử lý trường hợp API trả về tên miền có www hoặc tên miền phụ.
-    let detectedProvider = provider;
+    let detectedProvider = normalizeProvider(data.provider);
     if (!CODE_PAGES[detectedProvider]) {
       const providerDomains = {
         TopLinks: ["toplinks.io"],
@@ -548,7 +548,7 @@ button.addEventListener("click", async () => {
       for (const candidate of [data.destination, url]) {
         if (!candidate) continue;
         try {
-          const host = new URL(candidate).hostname.toLowerCase().replace(/^www\\./, "");
+          const host = new URL(candidate).hostname.toLowerCase().replace(/^www\./, "");
           const match = Object.entries(providerDomains).find(([, domains]) =>
             domains.some(domain => host === domain || host.endsWith("." + domain))
           );
