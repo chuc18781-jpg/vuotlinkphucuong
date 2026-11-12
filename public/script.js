@@ -232,8 +232,65 @@ function renderResult(data, originalUrl) {
       result.appendChild(openSearchButton);
       showText("small", "Google tự xếp hạng kết quả tìm kiếm. Hãy tự kiểm tra nội dung và chọn trang phù hợp; V10 không tự mở trang thay bạn.");
     } else {
-      showText("p", "API hiện chưa cung cấp trường từ khóa công khai. V10 không thể tự đọc nội dung tab Link4m khác do giới hạn bảo mật trình duyệt.");
-      showText("small", "Khi nhà cung cấp/API bổ sung metadata từ khóa được phép truy cập, V10 sẽ tự nhận diện và tạo tìm kiếm mà không cần nhập thủ công.");
+      showText("p", "Chưa tìm thấy từ khóa trong URL công khai. Bạn có thể nhập từ khóa theo hướng dẫn của Link4m để tạo tìm kiếm Google.");
+      showText("small", "V10 vẫn tự nhận diện từ khóa nếu sau này Link4m đưa từ khóa vào URL hoặc metadata công khai.");
+
+      const keywordLabel = document.createElement("label");
+      keywordLabel.textContent = "NHẬP TỪ KHÓA LINK4M YÊU CẦU";
+      keywordLabel.htmlFor = "link4mKeywordInput";
+      result.appendChild(keywordLabel);
+
+      const keywordInput = document.createElement("input");
+      keywordInput.id = "link4mKeywordInput";
+      keywordInput.type = "search";
+      keywordInput.maxLength = 200;
+      keywordInput.autocomplete = "off";
+      keywordInput.placeholder = "Nhập từ khóa cần tìm...";
+      keywordInput.setAttribute("aria-label", "Từ khóa tìm kiếm Google");
+      result.appendChild(keywordInput);
+
+      const searchFeedback = document.createElement("small");
+      searchFeedback.className = "provider-code-hint";
+      searchFeedback.setAttribute("role", "status");
+      result.appendChild(searchFeedback);
+
+      const searchButton = document.createElement("button");
+      searchButton.type = "button";
+      searchButton.textContent = "TÌM KIẾM GOOGLE ↗";
+      searchButton.disabled = true;
+      searchButton.addEventListener("click", () => {
+        const manualKeyword = keywordInput.value.trim().replace(/\\s+/g, " ").slice(0, 200);
+        if (!manualKeyword) {
+          searchFeedback.textContent = "Vui lòng nhập từ khóa trước.";
+          keywordInput.focus();
+          return;
+        }
+        const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(manualKeyword);
+        const opened = window.open(searchUrl, "_blank", "noopener,noreferrer");
+        searchFeedback.textContent = opened
+          ? "Đã mở Google. Hãy tự kiểm tra và chọn kết quả phù hợp."
+          : "Trình duyệt đã chặn cửa sổ mới. Hãy cho phép pop-up hoặc dùng liên kết bên dưới.";
+        manualSearchLink.href = searchUrl;
+        manualSearchLink.hidden = false;
+      });
+
+      const manualSearchLink = document.createElement("a");
+      manualSearchLink.className = "result-link";
+      manualSearchLink.textContent = "MỞ KẾT QUẢ GOOGLE ↗";
+      manualSearchLink.target = "_blank";
+      manualSearchLink.rel = "noopener noreferrer";
+      manualSearchLink.hidden = true;
+      result.appendChild(manualSearchLink);
+
+      keywordInput.addEventListener("input", () => {
+        searchButton.disabled = !keywordInput.value.trim();
+        searchFeedback.textContent = "";
+        manualSearchLink.hidden = true;
+      });
+      keywordInput.addEventListener("keydown", event => {
+        if (event.key === "Enter" && !searchButton.disabled) searchButton.click();
+      });
+      result.appendChild(searchButton);
     }
   }
 
