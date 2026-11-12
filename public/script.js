@@ -330,9 +330,29 @@ button.addEventListener("click", async () => {
       );
     }
 
-    renderResult(data, url);
+    // Nhận diện nhà cung cấp từ phản hồi API; dự phòng đọc hostname của link gốc
+    // để xử lý trường hợp API trả về tên miền có www hoặc tên miền phụ.
+    let detectedProvider = data.provider;
+    if (!CODE_PAGES[detectedProvider]) {
+      try {
+        const host = new URL(url).hostname.toLowerCase().replace(/^www\\./, "");
+        detectedProvider = Object.keys(CODE_PAGES).find(name => {
+          const domain = {
+            TopLinks: "toplinks.io",
+            Link4m: "link4m.org",
+            Traffic19: "traffic19.com"
+          }[name];
+          return host === domain || host.endsWith("." + domain);
+        }) || detectedProvider;
+      } catch {}
+    }
 
-    const codePage = CODE_PAGES[data.provider];
+    const routedData = { ...data, provider: detectedProvider };
+    renderResult(routedData, url);
+
+    // Ưu tiên trang lấy mã đã cấu hình theo nhà cung cấp.
+    // Nếu không có trang riêng, mở URL đích đã được API phân tích.
+    const codePage = CODE_PAGES[detectedProvider];
     const destination = data.destination;
     const targetPage = codePage || (
       destination && validUrl(destination) ? destination : null
