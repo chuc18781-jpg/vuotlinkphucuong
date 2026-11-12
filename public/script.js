@@ -2,6 +2,7 @@
 const input = document.getElementById("urlInput");
 const button = document.getElementById("processBtn");
 const paste = document.getElementById("pasteBtn");
+const shortenButton = document.getElementById("shortenBtn");
 const result = document.getElementById("result");
 
 const CODE_PAGES = {
@@ -10,7 +11,6 @@ const CODE_PAGES = {
   Traffic19: "https://traffic19.com/w13PJjsgO"
 };
 
-let redirectTimer = null;
 
 const STATUS = {
   success: ["KIỂM TRA THÀNH CÔNG", "success"],
@@ -171,25 +171,6 @@ function renderResult(data, originalUrl) {
   renderWorker(data.worker);
   renderHistory(data.history);
 
-  // Chuyển tới trang lấy mã đã cấu hình cho đúng nhà cung cấp.
-  const codePage = CODE_PAGES[data.provider];
-  if (codePage && data.status !== "unsupported") {
-    showText("p", "Đang chuyển đến trang lấy mã trong 3 giây...");
-    const cancelButton = document.createElement("button");
-    cancelButton.type = "button";
-    cancelButton.textContent = "HỦY CHUYỂN HƯỚNG";
-    cancelButton.addEventListener("click", () => {
-      if (redirectTimer) clearTimeout(redirectTimer);
-      redirectTimer = null;
-      cancelButton.textContent = "ĐÃ HỦY CHUYỂN HƯỚNG";
-      cancelButton.disabled = true;
-    });
-    result.appendChild(cancelButton);
-    if (redirectTimer) clearTimeout(redirectTimer);
-    redirectTimer = setTimeout(() => {
-      window.location.assign(codePage);
-    }, 3000);
-  }
 
   if (data.status !== "code_available") {
     showText(
@@ -259,5 +240,51 @@ button.addEventListener("click", async () => {
 input.addEventListener("keydown", event => {
   if (event.key === "Enter" && !button.disabled) {
     button.click();
+  }
+});
+
+
+shortenButton.addEventListener("click", async () => {
+  const url = input.value.trim();
+
+  if (!validUrl(url)) {
+    result.textContent = "Vui lòng nhập URL HTTP hoặc HTTPS hợp lệ trước khi tạo link.";
+    return;
+  }
+
+  shortenButton.disabled = true;
+  shortenButton.textContent = "ĐANG TẠO LINK...";
+  result.textContent = "Đang gửi URL đến Traffic19...";
+
+  try {
+    const response = await fetch("/api/traffic19", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.shortUrl) {
+      throw new Error(data.message || "Traffic19 không tạo được link.");
+    }
+
+    result.replaceChildren();
+    showText("h3", "TẠO LINK THÀNH CÔNG", "status-success");
+    showText("p", "Link Traffic19 của bạn:");
+    showText("p", data.shortUrl, "verification-code");
+    addLink("MỞ LINK TRAFFIC19 ↗", data.shortUrl);
+
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.textContent = "SAO CHÉP LINK";
+    copyButton.addEventListener("click", () => copyText(data.shortUrl, copyButton));
+    result.appendChild(copyButton);
+  } catch (error) {
+    result.replaceChildren();
+    showText("h3", "KHÔNG TẠO ĐƯỢC LINK", "status-error");
+    showText("p", error.message || "Không thể kết nối Traffic19.");
+  } finally {
+    shortenButton.disabled = false;
+    shortenButton.textContent = "↗ TẠO LINK TRAFFIC19";
   }
 });
