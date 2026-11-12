@@ -4,6 +4,61 @@ const button = document.getElementById("processBtn");
 const paste = document.getElementById("pasteBtn");
 const shortenButton = document.getElementById("shortenBtn");
 const result = document.getElementById("result");
+const HISTORY_KEY = "auto-link-pro-v11-history";
+const HISTORY_LIMIT = 12;
+
+function saveHistory(entry) {
+  try {
+    const old = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+    const next = [entry, ...old.filter(item => item.url !== entry.url)].slice(0, HISTORY_LIMIT);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+function renderLocalHistory() {
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch {}
+  const section = document.createElement("section");
+  section.className = "local-history";
+  const heading = document.createElement("div");
+  heading.className = "local-history-heading";
+  const title = document.createElement("h4");
+  title.textContent = "LỊCH SỬ GẦN ĐÂY";
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "history-clear";
+  clear.textContent = "XÓA LỊCH SỬ";
+  clear.addEventListener("click", () => {
+    try { localStorage.removeItem(HISTORY_KEY); } catch {}
+    section.remove();
+  });
+  heading.append(title, clear);
+  section.appendChild(heading);
+  if (!items.length) {
+    const empty = document.createElement("small");
+    empty.textContent = "Chưa có lần kiểm tra nào được lưu.";
+    section.appendChild(empty);
+  } else {
+    items.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "local-history-item";
+      const url = document.createElement("span");
+      url.textContent = item.url;
+      const meta = document.createElement("small");
+      meta.textContent = [item.provider, item.status, item.time].filter(Boolean).join(" · ");
+      const reopen = document.createElement("button");
+      reopen.type = "button";
+      reopen.textContent = "DÙNG LẠI";
+      reopen.addEventListener("click", () => {
+        input.value = item.url;
+        input.focus();
+      });
+      row.append(url, meta, reopen);
+      section.appendChild(row);
+    });
+  }
+  result.appendChild(section);
+}
 
 const CODE_PAGES = {
   TopLinks: "https://toplinks.io/ataRjVk",
@@ -158,6 +213,12 @@ function renderResult(data, originalUrl) {
   result.replaceChildren();
 
   const status = STATUS[data.status] || STATUS.unsupported;
+  saveHistory({
+    url: originalUrl,
+    provider: data.provider || "Không xác định",
+    status: data.status || "unsupported",
+    time: new Date().toLocaleString("vi-VN")
+  });
 
   showText("h3", status[0], "status-" + status[1]);
   showText("p", data.message || "Không có thông báo.");
@@ -430,6 +491,8 @@ function renderResult(data, originalUrl) {
     result.appendChild(codeActions);
   }
 
+  renderLocalHistory();
+
   if (data.status !== "code_available") {
     showText(
       "p",
@@ -459,7 +522,7 @@ button.addEventListener("click", async () => {
   }
 
   // Mở tab đồng bộ ngay trong thao tác click để tránh trình duyệt chặn popup.
-  const providerTab = window.open("about:blank", "_blank");
+  const providerTab = null; // Chỉ mở trang đích sau khi người dùng bấm nút rõ ràng.
   if (providerTab) {
     providerTab.document.title = "AUTO LINK PRO - Đang tìm trang lấy mã";
     providerTab.document.body.textContent = "Đang xác định trang nhà cung cấp...";
@@ -467,7 +530,7 @@ button.addEventListener("click", async () => {
 
   button.disabled = true;
   button.textContent = "ĐANG PHÂN TÍCH...";
-  result.textContent = "Đang kiểm tra liên kết...";
+  result.textContent = "Đang kiểm tra liên kết an toàn...";
 
   try {
     const response = await fetch("/api/process", {
