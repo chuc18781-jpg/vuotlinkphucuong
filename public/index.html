@@ -4,43 +4,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AUTO LINK PRO AI</title>
+  <meta name="theme-color" content="#07111f">
+  <title>AUTO LINK PRO V9</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <div class="background-glow"></div>
+
   <header class="topbar">
-    <div class="logo">↗ AUTO LINK <span>PRO AI</span></div>
-    <div class="status">● HỆ THỐNG SẴN SÀNG</div>
+    <a class="brand" href="/">
+      <div class="brand-icon">↗</div>
+      <div>
+        <strong>AUTO LINK PRO</strong>
+        <small>SMART LINK ANALYZER</small>
+      </div>
+    </a>
+    <span class="version">VERSION 9.0</span>
   </header>
 
   <main class="container">
-    <div class="tag">✦ SMART LINK CHECKER</div>
-    <h1>Kiểm tra link <span>thông minh.</span></h1>
-    <p class="subtitle">Phân tích chuyển hướng liên kết nhanh chóng và an toàn.</p>
+    <section class="hero">
+      <div class="online"><span></span> SYSTEM ONLINE</div>
+      <h1>AUTO LINK PRO <b>V9</b></h1>
+      <p>Phân tích liên kết thông minh · Nhanh chóng · An toàn</p>
+    </section>
 
     <section class="panel">
-      <label for="urlInput">NHẬP ĐƯỜNG LINK</label>
+      <label for="urlInput">NHẬP LIÊN KẾT CỦA BẠN</label>
+
       <div class="input-wrap">
+        <span>↗</span>
         <input id="urlInput" type="url"
-          placeholder="https://example.com/link">
-        <button id="pasteBtn" type="button">DÁN</button>
+          placeholder="https://example.com/your-link">
       </div>
-      <button id="processBtn" type="button">✦ KIỂM TRA LIÊN KẾT →</button>
-      <div id="result" class="result"></div>
+
+      <div class="actions">
+        <button id="pasteBtn" class="paste-btn">▣ DÁN LINK</button>
+        <button id="processBtn" class="process-btn">
+          ✦ KIỂM TRA LIÊN KẾT →
+        </button>
+      </div>
+    </section>
+
+    <section class="panel result-panel">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">ANALYSIS CENTER</span>
+          <h2>KẾT QUẢ PHÂN TÍCH</h2>
+        </div>
+        <span class="version-small">V9</span>
+      </div>
+
+      <div id="result" aria-live="polite">
+        <div class="empty">
+          <div class="empty-icon">⌕</div>
+          <p>Chưa có liên kết được kiểm tra</p>
+          <small>Nhập link phía trên để bắt đầu phân tích.</small>
+        </div>
+      </div>
     </section>
 
     <section class="features">
-      <article><h3>⚡ Nhanh chóng</h3><p>Kiểm tra chuyển hướng HTTP.</p></article>
-      <article><h3>🛡 An toàn</h3><p>Kiểm tra link và chặn địa chỉ nội bộ.</p></article>
-      <article><h3>◎ Minh bạch</h3><p>Hiển thị trạng thái và kết quả.</p></article>
+      <div class="feature">
+        <span>◉</span>
+        <div><strong>WORKER</strong><small>Giám sát kết nối</small></div>
+      </div>
+      <div class="feature">
+        <span>◷</span>
+        <div><strong>HISTORY</strong><small>Lịch sử phân tích</small></div>
+      </div>
     </section>
 
-    <p class="notice">
-      Lưu ý: Không vượt CAPTCHA, quảng cáo bắt buộc hoặc xác minh truy cập.
-    </p>
-    <footer>© 2026 AUTO LINK PRO AI</footer>
+    <footer>
+      AUTO LINK PRO V9 <span>•</span> SECURE LINK ANALYZER
+    </footer>
   </main>
 
-  <script src="/script.js"></script>
+  <script src="/script.js" defer></script>
 </body>
 </html>

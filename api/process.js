@@ -4,53 +4,57 @@ import https from "node:https";
 import dns from "node:dns/promises";
 import net from "node:net";
 
+const VERSION = "9.0";
 const MAX_REDIRECTS = 8;
 const TIMEOUT_MS = 7000;
+const WORKER_TIMEOUT_MS = 25000;
 
 const WORKER_URL = process.env.WORKER_URL;
 const WORKER_API_KEY = process.env.WORKER_API_KEY;
+
+const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
+
+const WORKER_STATUSES = new Set([
+  "manual_required",
+  "verification_required",
+  "worker_unavailable",
+  "unsupported"
+]);
 
 function isPublicIPv4(ip) {
   if (net.isIP(ip) !== 4) return false;
 
   const p = ip.split(".").map(Number);
-  const [a, b] = p;
+  const [a, b, c] = p;
 
   if (
     a === 0 || a === 10 || a === 127 || a >= 224 ||
     (a === 100 && b >= 64 && b <= 127) ||
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
     (a === 192 && b === 0) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 88 && c === 99) ||
     (a === 198 && (b === 18 || b === 19)) ||
-    (a === 198 && b === 51 && p[2] === 100) ||
-    (a === 203 && b === 0 && p[2] === 113)
+    (a === 198 && b === 51 && c === 100) ||
+    (a === 203 && b === 0 && c === 113)
   ) return false;
 
   return true;
 }
 
 function getProvider(hostname) {
-  const host = hostname.toLowerCase();
+  const host = hostname.toLowerCase().replace(/\.$/, "");
 
   const providers = [
-    {
-      name: "Link4m",
-      domains: ["link4m.org", "link4m.com", "link4m.co"]
-    },
-    {
-      name: "Traffic19",
-      domains: ["traffic19.com"]
-    }
+    { name: "Link4m", domains: ["link4m.org", "link4m.com", "link4m.co"] },
+    { name: "Traffic19", domains: ["traffic19.com"] }
   ];
 
   for (const provider of providers) {
     if (provider.domains.some(domain =>
       host === domain || host.endsWith("." + domain)
-    )) {
-      return provider.name;
-    }
+    )) return provider.name;
   }
 
   if (host === "bit.ly") return "Bitly";
@@ -76,19 +80,22 @@ function validateUrl(value) {
     throw new Error("URL chứa thông tin đăng nhập không được hỗ trợ.");
   }
 
-  if (!url.hostname || url.hostname.includes(":")) {
+  if (!url.hostname || url.hostname.includes("%")) {
     throw new Error("Tên miền hoặc IP không hợp lệ.");
   }
 
-  return url;
-}
+  if (url.port && !["80", "443"].includes(url.port)) {
+    throw new Error("Chỉ hỗ trợ cổng HTTP và HTTPS thông dụng.");
+  }
 
-async function getPublicIP(hostname) {
-  if (net.isIP(hostname)) {
-    if (!isPublicIPv4(hostname)) {
-      throw new Error("Địa chỉ IP không công khai.");
-    }
-    return hostname;
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+
+  if (net.isIP(hostname) === 6) {
+    throw new Error("Không hỗ trợ địa chỉ IPv6.");
+  }
+
+  if (net.isIP(hostname) === 4 && !isPublicIPv4(hostname)) {
+    throw new Error("Địa chỉ IP không công khai.");
   }
 
   if (
@@ -99,21 +106,32 @@ async function getPublicIP(hostname) {
     throw new Error("Không hỗ trợ tên miền nội bộ.");
   }
 
+  return url;
+}
+
+async function getPublicIP(hostname) {
+  if (net.isIP(hostname) === 4) {
+    if (!isPublicIPv4(hostname)) {
+      throw new Error("Địa chỉ IP không công khai.");
+    }
+    return hostname;
+  }
+
   const records = await dns.lookup(hostname, {
     all: true,
     verbatim: true,
     family: 4
   });
 
-  const publicRecords = records.filter(record =>
-    isPublicIPv4(record.address)
-  );
-
-  if (!publicRecords.length) {
-    throw new Error("Không tìm thấy IP IPv4 công khai.");
+  if (!records.length) {
+    throw new Error("Không tìm thấy địa chỉ IPv4.");
   }
 
-  return publicRecords[0].address;
+  if (records.some(record => !isPublicIPv4(record.address))) {
+    throw new Error("Tên miền trả về IP không công khai.");
+  }
+
+  return records[0].address;
 }
 
 function requestOnce(url, method, ip) {
@@ -127,7 +145,7 @@ function requestOnce(url, method, ip) {
       path: url.pathname + url.search,
       method,
       headers: {
-        "User-Agent": "AUTO-LINK-PRO/8.0",
+        "User-Agent": "AUTO-LINK-PRO/9.0",
         "Accept": "text/html,application/json,*/*",
         "Connection": "close"
       },
@@ -160,7 +178,8 @@ function requestOnce(url, method, ip) {
 }
 
 async function checkUrl(url) {
-  const ip = await getPublicIP(url.hostname);
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  const ip = await getPublicIP(hostname);
 
   let result = await requestOnce(url, "HEAD", ip);
   let method = "HEAD";
@@ -181,8 +200,16 @@ async function inspectWithWorker(url) {
     };
   }
 
-  const base = WORKER_URL.replace(/\/+$/, "");
-  const endpoint = new URL("/inspect", base);
+  let endpoint;
+
+  try {
+    endpoint = new URL("/inspect", WORKER_URL.replace(/\/+$/, ""));
+  } catch {
+    return {
+      status: "worker_unavailable",
+      message: "Địa chỉ Worker không hợp lệ."
+    };
+  }
 
   if (
     endpoint.protocol !== "https:" ||
@@ -194,26 +221,49 @@ async function inspectWithWorker(url) {
     };
   }
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${WORKER_API_KEY}`
-    },
-    body: JSON.stringify({ url }),
-    signal: AbortSignal.timeout(25000)
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), WORKER_TIMEOUT_MS);
 
-  const data = await response.json().catch(() => ({}));
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${WORKER_API_KEY}`
+      },
+      body: JSON.stringify({ url }),
+      signal: controller.signal
+    });
 
-  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        status: "worker_unavailable",
+        message: typeof data.message === "string"
+          ? data.message.slice(0, 300)
+          : `Worker trả về HTTP ${response.status}.`
+      };
+    }
+
+    const status = WORKER_STATUSES.has(data.status)
+      ? data.status
+      : "manual_required";
+
+    return {
+      status,
+      message: typeof data.message === "string"
+        ? data.message.slice(0, 500)
+        : "Worker đã phản hồi."
+    };
+  } catch {
     return {
       status: "worker_unavailable",
-      message: data.message || `Worker trả về HTTP ${response.status}.`
+      message: "Không thể kết nối Worker."
     };
+  } finally {
+    clearTimeout(timer);
   }
-
-  return data;
 }
 
 async function resolveRedirects(input) {
@@ -230,15 +280,12 @@ async function resolveRedirects(input) {
       method: result.method
     });
 
-    // HTTP 403: chuyển sang thao tác thủ công.
-    if (result.statusCode === 401 || result.statusCode === 403) {
+    if ([401, 403].includes(result.statusCode)) {
       return {
         status: "manual_required",
         destination: current.href,
         code: null,
-        message:
-          `Nhà cung cấp ${provider} không cho phép kiểm tra tự động. ` +
-          "Bạn có thể mở trang để tiếp tục trực tiếp.",
+        message: `Nhà cung cấp ${provider} yêu cầu thao tác trực tiếp. Hãy mở trang để tiếp tục.`,
         history
       };
     }
@@ -248,28 +295,19 @@ async function resolveRedirects(input) {
         status: "blocked",
         destination: current.href,
         code: null,
-        message:
-          "Nhà cung cấp đang giới hạn yêu cầu. Vui lòng thử lại sau.",
+        message: "Nhà cung cấp đang giới hạn yêu cầu. Vui lòng thử lại sau.",
         history
       };
     }
 
-    if (result.statusCode === 404) {
+    if ([404, 410].includes(result.statusCode)) {
       return {
         status: "unsupported",
         destination: null,
         code: null,
-        message: "Không tìm thấy đường dẫn.",
-        history
-      };
-    }
-
-    if (result.statusCode === 410) {
-      return {
-        status: "unsupported",
-        destination: null,
-        code: null,
-        message: "Đường dẫn có thể đã hết hạn hoặc bị gỡ.",
+        message: result.statusCode === 404
+          ? "Không tìm thấy đường dẫn."
+          : "Đường dẫn có thể đã hết hạn hoặc bị gỡ.",
         history
       };
     }
@@ -284,42 +322,26 @@ async function resolveRedirects(input) {
       };
     }
 
-    if (
-      [301, 302, 303, 307, 308].includes(result.statusCode) &&
-      result.location
-    ) {
-      current = validateUrl(
-        new URL(result.location, current).href
-      );
+    if (REDIRECT_CODES.has(result.statusCode) && result.location) {
+      current = validateUrl(new URL(result.location, current).href);
       continue;
     }
 
     if (result.statusCode >= 200 && result.statusCode < 300) {
-      const supported =
-        provider === "Link4m" || provider === "Traffic19";
-
-      let workerResult = null;
-
-      if (supported) {
-        try {
-          workerResult = await inspectWithWorker(current.href);
-        } catch {
-          workerResult = {
-            status: "worker_unavailable",
-            message: "Không thể kết nối Worker."
-          };
-        }
-      }
+      const supported = provider === "Link4m" || provider === "Traffic19";
+      const workerResult = supported
+        ? await inspectWithWorker(current.href)
+        : null;
 
       return {
-        status: "verification_required",
+        status: workerResult?.status === "manual_required"
+          ? "manual_required"
+          : "verification_required",
         destination: current.href,
         code: null,
         worker: workerResult,
-        message:
-          workerResult?.status === "manual_required"
-            ? workerResult.message
-            : "Trang đã phản hồi. Nếu cần xác minh, hãy tiếp tục trực tiếp trên trang nhà cung cấp.",
+        message: workerResult?.message ||
+          "Trang đã phản hồi. Hãy tiếp tục trực tiếp trên trang nhà cung cấp.",
         history
       };
     }
@@ -350,12 +372,14 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
 
     return res.status(405).json({
+      version: VERSION,
       status: "unsupported",
       message: "Chỉ hỗ trợ phương thức POST."
     });
   }
 
   let originalUrl = "";
+  let provider = "Không xác định";
 
   try {
     const body = typeof req.body === "string"
@@ -368,6 +392,7 @@ export default async function handler(req, res) {
       body.url.length > 2048
     ) {
       return res.status(400).json({
+        version: VERSION,
         status: "unsupported",
         message: "Vui lòng nhập link hợp lệ."
       });
@@ -375,25 +400,22 @@ export default async function handler(req, res) {
 
     const url = validateUrl(body.url.trim());
     originalUrl = url.href;
+    provider = getProvider(url.hostname);
 
-    const provider = getProvider(url.hostname);
-    const result = await resolveRedirects(url.href);
+    const result = await resolveRedirects(originalUrl);
 
     return res.status(200).json({
-      version: "8.0",
+      version: VERSION,
       provider,
       originalUrl,
       code: null,
       ...result
     });
-
   } catch (error) {
     return res.status(200).json({
-      version: "8.0",
+      version: VERSION,
       status: "unsupported",
-      provider: originalUrl
-        ? getProvider(new URL(originalUrl).hostname)
-        : "Không xác định",
+      provider,
       originalUrl,
       destination: null,
       code: null,
