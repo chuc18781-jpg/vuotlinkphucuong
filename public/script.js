@@ -123,6 +123,37 @@ function renderHistory(history) {
   showText("p", `Tổng số bước: ${history.length}`);
 }
 
+function findPublicKeyword(data, originalUrl) {
+  const allowedKeys = new Set(["q", "query", "keyword", "search", "s", "kw"]);
+  const candidates = [];
+  const addUrl = value => {
+    if (typeof value !== "string" || !value.trim()) return;
+    try {
+      const parsed = new URL(value);
+      if (!["http:", "https:"].includes(parsed.protocol)) return;
+      candidates.push(parsed);
+    } catch {}
+  };
+
+  // Chỉ phân tích URL người dùng nhập và các URL trong lịch sử redirect API đã trả về.
+  addUrl(originalUrl);
+  addUrl(data.destination);
+  if (Array.isArray(data.history)) {
+    data.history.forEach(item => addUrl(item && item.url));
+  }
+
+  for (const url of candidates) {
+    for (const [key, value] of url.searchParams.entries()) {
+      if (!allowedKeys.has(key.toLowerCase())) continue;
+      const keyword = value.trim().replace(/\\s+/g, " ").slice(0, 200);
+      if (keyword && !/^https?:\\/\\//i.test(keyword)) {
+        return { keyword, source: url.hostname + " ?" + key };
+      }
+    }
+  }
+  return null;
+}
+
 function renderResult(data, originalUrl) {
   result.replaceChildren();
 
@@ -178,26 +209,15 @@ function renderResult(data, originalUrl) {
   renderWorker(data.worker);
   renderHistory(data.history);
 
-  // Chỉ dùng từ khóa nếu nó được API/metadata công khai của nhà cung cấp trả về.
-  // Không đọc DOM của tab bên thứ ba, không dò endpoint riêng tư và không tự truy cập kết quả.
+  // Chỉ phân tích tham số tìm kiếm có sẵn trong URL gốc/URL redirect được API trả về.
+  // Không đọc DOM tab khác, không dò endpoint riêng tư và không tự truy cập kết quả.
   if (data.provider === "Link4m") {
-    const metadata = data.publicMetadata && typeof data.publicMetadata === "object"
-      ? data.publicMetadata
-      : {};
-    const rawKeyword = [
-      data.searchKeyword,
-      data.search_keyword,
-      data.keyword,
-      metadata.searchKeyword,
-      metadata.search_keyword,
-      metadata.keyword
-    ].find(value => typeof value === "string" && value.trim());
-
-    const keyword = rawKeyword ? rawKeyword.trim().slice(0, 200) : "";
+    const found = findPublicKeyword(data, originalUrl);
+    const keyword = found?.keyword || "";
     showText("h4", "TÌM TRANG PHÙ HỢP TRÊN GOOGLE");
 
     if (keyword) {
-      showText("p", "V10 nhận được từ khóa từ dữ liệu công khai do nhà cung cấp/API cung cấp:");
+      showText("p", "V10 phát hiện từ khóa trong tham số URL công khai (" + found.source + "):");
       showText("p", keyword, "verification-code");
 
       const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(keyword);
