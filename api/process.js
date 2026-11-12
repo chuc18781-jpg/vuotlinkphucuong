@@ -4,10 +4,10 @@ import https from "node:https";
 import dns from "node:dns/promises";
 import net from "node:net";
 
-const VERSION = "9.0";
+const VERSION = "10.0";
 const MAX_REDIRECTS = 8;
 const TIMEOUT_MS = 7000;
-const WORKER_TIMEOUT_MS = 25000;
+const WORKER_TIMEOUT_MS = 20000;
 
 const WORKER_URL = process.env.WORKER_URL;
 const WORKER_API_KEY = process.env.WORKER_API_KEY;
@@ -53,7 +53,7 @@ function getProvider(hostname) {
 
   for (const provider of providers) {
     if (provider.domains.some(domain =>
-      host === domain || host.endsWith("." + domain)
+      host === domain
     )) return provider.name;
   }
 
@@ -145,7 +145,7 @@ function requestOnce(url, method, ip) {
       path: url.pathname + url.search,
       method,
       headers: {
-        "User-Agent": "AUTO-LINK-PRO/9.0",
+        "User-Agent": "AUTO-LINK-PRO/10.0",
         "Accept": "text/html,application/json,*/*",
         "Connection": "close"
       },
