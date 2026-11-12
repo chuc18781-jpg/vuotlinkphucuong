@@ -178,56 +178,43 @@ function renderResult(data, originalUrl) {
   renderWorker(data.worker);
   renderHistory(data.history);
 
-  // Tìm bài viết theo từ khóa Link4m cung cấp; người dùng tự chọn kết quả phù hợp.
+  // Chỉ dùng từ khóa nếu nó được API/metadata công khai của nhà cung cấp trả về.
+  // Không đọc DOM của tab bên thứ ba, không dò endpoint riêng tư và không tự truy cập kết quả.
   if (data.provider === "Link4m") {
+    const metadata = data.publicMetadata && typeof data.publicMetadata === "object"
+      ? data.publicMetadata
+      : {};
+    const rawKeyword = [
+      data.searchKeyword,
+      data.search_keyword,
+      data.keyword,
+      metadata.searchKeyword,
+      metadata.search_keyword,
+      metadata.keyword
+    ].find(value => typeof value === "string" && value.trim());
+
+    const keyword = rawKeyword ? rawKeyword.trim().slice(0, 200) : "";
     showText("h4", "TÌM TRANG PHÙ HỢP TRÊN GOOGLE");
-    showText("p", "Dán từ khóa Link4m cung cấp. V10 sẽ tạo truy vấn Google để bạn xem và chọn trang có tiêu đề, nội dung phù hợp.");
 
-    const keywordInput = document.createElement("input");
-    keywordInput.id = "link4mKeywordInput";
-    keywordInput.type = "search";
-    keywordInput.maxLength = 200;
-    keywordInput.autocomplete = "off";
-    keywordInput.placeholder = "Nhập từ khóa tìm kiếm...";
-    keywordInput.setAttribute("aria-label", "Từ khóa tìm kiếm Link4m");
-    result.appendChild(keywordInput);
+    if (keyword) {
+      showText("p", "V10 nhận được từ khóa từ dữ liệu công khai do nhà cung cấp/API cung cấp:");
+      showText("p", keyword, "verification-code");
 
-    const pasteKeywordButton = document.createElement("button");
-    pasteKeywordButton.type = "button";
-    pasteKeywordButton.textContent = "DÁN TỪ KHÓA ĐÃ SAO CHÉP";
-    pasteKeywordButton.addEventListener("click", async () => {
-      try {
-        const copiedText = (await navigator.clipboard.readText()).trim();
-        if (!copiedText) {
-          keywordInput.focus();
-          showText("p", "Clipboard đang trống. Hãy sao chép từ khóa trên trang Link4m trước.");
-          return;
-        }
-        keywordInput.value = copiedText.slice(0, 200);
-        keywordInput.focus();
-      } catch {
-        showText("p", "Trình duyệt không cho phép đọc clipboard. Bạn có thể dán bằng Ctrl + V.");
-        keywordInput.focus();
-      }
-    });
-    result.appendChild(pasteKeywordButton);
-
-    const searchButton = document.createElement("button");
-    searchButton.type = "button";
-    searchButton.textContent = "TÌM TRANG PHÙ HỢP ↗";
-    searchButton.addEventListener("click", () => {
-      const keyword = keywordInput.value.trim();
-      if (!keyword) {
-        keywordInput.focus();
-        showText("p", "Hãy dán hoặc nhập từ khóa Link4m hiển thị trước.");
-        return;
-      }
       const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(keyword);
-      addLink("MỞ DANH SÁCH KẾT QUẢ GOOGLE ↗", searchUrl);
-      window.open(searchUrl, "_blank", "noopener,noreferrer");
-    });
-    result.appendChild(searchButton);
-    showText("small", "Chọn thủ công kết quả có tiêu đề và nội dung khớp từ khóa; kiểm tra tên miền trước khi mở. V10 không tự chọn hoặc truy cập kết quả, không nhấp quảng cáo và không xử lý CAPTCHA.");
+      addLink("XEM KẾT QUẢ GOOGLE ĐƯỢC XẾP HẠNG ↗", searchUrl);
+
+      const openSearchButton = document.createElement("button");
+      openSearchButton.type = "button";
+      openSearchButton.textContent = "MỞ KẾT QUẢ GOOGLE ↗";
+      openSearchButton.addEventListener("click", () => {
+        window.open(searchUrl, "_blank", "noopener,noreferrer");
+      });
+      result.appendChild(openSearchButton);
+      showText("small", "Google tự xếp hạng kết quả tìm kiếm. Hãy tự kiểm tra nội dung và chọn trang phù hợp; V10 không tự mở trang thay bạn.");
+    } else {
+      showText("p", "API hiện chưa cung cấp trường từ khóa công khai. V10 không thể tự đọc nội dung tab Link4m khác do giới hạn bảo mật trình duyệt.");
+      showText("small", "Khi nhà cung cấp/API bổ sung metadata từ khóa được phép truy cập, V10 sẽ tự nhận diện và tạo tìm kiếm mà không cần nhập thủ công.");
+    }
   }
 
   // Khu vực nhập mã thủ công cho nhà cung cấp đã nhận diện.
