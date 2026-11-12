@@ -4,7 +4,7 @@ import https from "node:https";
 import dns from "node:dns/promises";
 import net from "node:net";
 
-const VERSION = "10.0";
+const VERSION = "11.0";
 const MAX_REDIRECTS = 8;
 const TIMEOUT_MS = 7000;
 const WORKER_TIMEOUT_MS = 20000;
@@ -47,13 +47,14 @@ function getProvider(hostname) {
   const host = hostname.toLowerCase().replace(/\.$/, "");
 
   const providers = [
+    { name: "TopLinks", domains: ["toplinks.io"] },
     { name: "Link4m", domains: ["link4m.org", "link4m.com", "link4m.co"] },
     { name: "Traffic19", domains: ["traffic19.com"] }
   ];
 
   for (const provider of providers) {
     if (provider.domains.some(domain =>
-      host === domain
+      host === domain || host.endsWith("." + domain)
     )) return provider.name;
   }
 
@@ -145,7 +146,7 @@ function requestOnce(url, method, ip) {
       path: url.pathname + url.search,
       method,
       headers: {
-        "User-Agent": "AUTO-LINK-PRO/10.0",
+        "User-Agent": "AUTO-LINK-PRO/11.0",
         "Accept": "text/html,application/json,*/*",
         "Connection": "close"
       },
@@ -184,7 +185,7 @@ async function checkUrl(url) {
   let result = await requestOnce(url, "HEAD", ip);
   let method = "HEAD";
 
-  if ([405, 501].includes(result.statusCode)) {
+  if ([403, 405, 501].includes(result.statusCode)) {
     result = await requestOnce(url, "GET", ip);
     method = "GET";
   }
@@ -404,12 +405,18 @@ export default async function handler(req, res) {
 
     const result = await resolveRedirects(originalUrl);
 
+    // Ưu tiên nhận diện nhà cung cấp tại URL cuối cùng sau chuỗi chuyển hướng.
+    // Điều này giúp link rút gọn trung gian vẫn được định tuyến đúng trang lấy mã.
+    const finalProvider = result.destination
+      ? getProvider(new URL(result.destination).hostname)
+      : provider;
+
     return res.status(200).json({
       version: VERSION,
-      provider,
+      ...result,
+      provider: finalProvider !== "Không xác định" ? finalProvider : provider,
       originalUrl,
-      code: null,
-      ...result
+      code: null
     });
   } catch (error) {
     return res.status(200).json({
