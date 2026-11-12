@@ -405,12 +405,18 @@ export default async function handler(req, res) {
 
     const result = await resolveRedirects(originalUrl);
 
+    // Ưu tiên nhận diện nhà cung cấp tại URL cuối cùng sau chuỗi chuyển hướng.
+    // Điều này giúp link rút gọn trung gian vẫn được định tuyến đúng trang lấy mã.
+    const finalProvider = result.destination
+      ? getProvider(new URL(result.destination).hostname)
+      : provider;
+
     return res.status(200).json({
       version: VERSION,
-      provider,
+      ...result,
+      provider: finalProvider !== "Không xác định" ? finalProvider : provider,
       originalUrl,
-      code: null,
-      ...result
+      code: null
     });
   } catch (error) {
     return res.status(200).json({
