@@ -173,7 +173,7 @@ function renderResult(data, originalUrl) {
 
   // Mở trang lấy mã do người dùng cung cấp trong tab mới.
   const codePage = CODE_PAGES[data.provider];
-  if (codePage && data.status !== "unsupported") {
+  if (codePage) {
     showText("h4", "LẤY MÃ TỪ NHÀ CUNG CẤP");
     showText("p", "Mở trang nhà cung cấp ở tab mới, hoàn thành các bước tại đó rồi quay lại nhập mã bên dưới.");
 
@@ -368,7 +368,7 @@ button.addEventListener("click", async () => {
     );
 
     if (providerTab) {
-      if (targetPage && data.status !== "unsupported") {
+      if (codePage || (targetPage && data.status !== "unsupported")) {
         providerTab.location.replace(targetPage);
       } else {
         providerTab.close();
