@@ -402,3 +402,37 @@ footer span {
     padding: 7px 9px;
   }
 }
+
+
+/* V10: trang nhập mã nhà cung cấp */
+#result input#providerCodeInput {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 10px 0 12px;
+  padding: 0 14px;
+  border: 1px solid #315779;
+  border-radius: 10px;
+  outline: none;
+  color: #eaf5ff;
+  background: #071625;
+  font: inherit;
+}
+#result input#providerCodeInput:focus {
+  border-color: #39aaff;
+  box-shadow: 0 0 0 3px #168be522;
+}
+#result input#providerCodeInput::placeholder {
+  color: #66819b;
+}
+#result label[for="providerCodeInput"] {
+  display: block;
+  margin: 16px 0 8px;
+  color: #a9c8e3;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+#result button {
+  margin: 5px 8px 8px 0;
+}
