@@ -521,12 +521,6 @@ button.addEventListener("click", async () => {
     return;
   }
 
-  // Mở tab đồng bộ ngay trong thao tác click để tránh trình duyệt chặn popup.
-  const providerTab = null; // Chỉ mở trang đích sau khi người dùng bấm nút rõ ràng.
-  if (providerTab) {
-    providerTab.document.title = "AUTO LINK PRO - Đang tìm trang lấy mã";
-    providerTab.document.body.textContent = "Đang xác định trang nhà cung cấp...";
-  }
 
   button.disabled = true;
   button.textContent = "ĐANG PHÂN TÍCH...";
@@ -578,26 +572,9 @@ button.addEventListener("click", async () => {
     const routedData = { ...data, provider: detectedProvider };
     renderResult(routedData, url);
 
-    // Ưu tiên trang lấy mã đã cấu hình theo nhà cung cấp.
-    // Nếu không có trang riêng, mở URL đích đã được API phân tích.
-    const codePage = CODE_PAGES[detectedProvider];
-    const destination = data.destination;
-    const targetPage = codePage || (
-      destination && validUrl(destination) ? destination : null
-    );
 
-    if (providerTab) {
-      if (codePage || (targetPage && data.status !== "unsupported")) {
-        providerTab.location.replace(targetPage);
-      } else {
-        providerTab.close();
-      }
-    } else if (targetPage && data.status !== "unsupported") {
-      showText("p", "Trình duyệt đã chặn tab tự mở. Hãy cho phép cửa sổ bật lên (pop-up) rồi thử lại.");
-    }
 
   } catch (error) {
-    if (providerTab) providerTab.close();
     result.replaceChildren();
     showText("h3", "KHÔNG KẾT NỐI ĐƯỢC", "status-error");
     showText(
