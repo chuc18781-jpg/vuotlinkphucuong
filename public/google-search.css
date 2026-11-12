@@ -1,0 +1,10 @@
+/* V12 Google Search Smart */
+.google-smart{margin:14px 0 20px;padding:18px;border:1px solid #28618d;border-radius:14px;background:linear-gradient(145deg,#102b43,#0a1b2c)}
+.google-smart p{color:#a9c8e3;font-size:13px;line-height:1.6}
+.google-smart label{display:block;margin:14px 0 8px;color:#a9c8e3;font-size:11px;font-weight:800;letter-spacing:1px}
+.google-smart input{width:100%;min-height:48px;padding:12px 14px;border:1px solid #315779;border-radius:10px;background:#071625;color:#fff;font-size:14px;outline:none}
+.google-smart input:focus{border-color:#39aaff;box-shadow:0 0 0 3px #168be522}
+.google-smart-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.google-smart-status{display:block;min-height:20px;color:#8fc8ee;line-height:1.5}
+.google-smart .result-link{margin-top:10px}
+@media(max-width:560px){.google-smart{padding:14px}.google-smart-actions button{flex:1}}

@@ -1,88 +1,55 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#07111f">\n  <meta name="description" content="AUTO LINK PRO V11 - phân tích liên kết an toàn, lịch sử cục bộ và hỗ trợ nhiều nhà cung cấp.">
-  <title>AUTO LINK PRO V11</title>
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="AUTO LINK PRO V12 - phân tích liên kết và hỗ trợ Google Search thủ công, an toàn.">
+  <title>AUTO LINK PRO V12</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/google-search.css">\n  <link rel="stylesheet" href="/provider-guide.css">
 </head>
 <body>
   <div class="background-glow"></div>
-
   <header class="topbar">
     <a class="brand" href="/">
       <div class="brand-icon">↗</div>
-      <div>
-        <strong>AUTO LINK PRO</strong>
-        <small>SMART LINK ANALYZER</small>
-      </div>
+      <div><strong>AUTO LINK PRO</strong><small>SMART LINK ANALYZER</small></div>
     </a>
-    <span class="version">VERSION 11.0</span>
+    <span class="version">VERSION 12.0</span>
   </header>
-
   <main class="container">
     <section class="hero">
       <div class="online"><span></span> SYSTEM ONLINE</div>
-      <h1>AUTO LINK PRO <b>V11</b></h1>
-      <p>Phân tích liên kết thông minh · Nhanh chóng · An toàn</p>\n      <div class="v11-note">V11 · Lịch sử cục bộ · Kiểm tra URL · Thiết kế tương thích mọi màn hình</div>
+      <h1>AUTO LINK PRO <b>V12</b></h1>
+      <p>Phân tích liên kết thông minh · Google Search Smart · An toàn</p>
+      <div class="v11-note">V12 · Nhận diện từ khóa · Kiểm tra trước khi tìm · Tương thích mọi màn hình</div>
     </section>
-
     <section class="panel">
       <label for="urlInput">NHẬP LIÊN KẾT CỦA BẠN</label>
-
-      <div class="input-wrap">
-        <span>↗</span>
-        <input id="urlInput" type="url"
-          placeholder="https://example.com/your-link">
-      </div>
-
+      <div class="input-wrap"><span>↗</span><input id="urlInput" type="url" placeholder="https://example.com/your-link"></div>
       <div class="actions">
         <button id="pasteBtn" class="paste-btn">▣ DÁN LINK</button>
-        <button id="processBtn" class="process-btn">
-          ✦ KIỂM TRA LIÊN KẾT →
-        </button>
-        <button id="shortenBtn" class="paste-btn" type="button">
-          ↗ TẠO LINK TRAFFIC19
-        </button>
+        <button id="processBtn" class="process-btn">✦ KIỂM TRA LIÊN KẾT →</button>
+        <button id="shortenBtn" class="paste-btn" type="button">↗ TẠO LINK TRAFFIC19</button>
       </div>
     </section>
-
     <section class="panel result-panel">
       <div class="section-heading">
-        <div>
-          <span class="eyebrow">ANALYSIS CENTER</span>
-          <h2>KẾT QUẢ PHÂN TÍCH</h2>
-        </div>
-        <span class="version-small">V11</span>
+        <div><span class="eyebrow">ANALYSIS CENTER</span><h2>KẾT QUẢ PHÂN TÍCH</h2></div>
+        <span class="version-small">V12</span>
       </div>
-
       <div id="result" aria-live="polite">
-        <div class="empty">
-          <div class="empty-icon">⌕</div>
-          <p>Chưa có liên kết được kiểm tra</p>
-          <small>Nhập link phía trên để bắt đầu phân tích.</small>
-        </div>
+        <div class="empty"><div class="empty-icon">⌕</div><p>Chưa có liên kết được kiểm tra</p><small>Nhập link phía trên để bắt đầu phân tích.</small></div>
       </div>
     </section>
-
     <section class="features">
-      <div class="feature">
-        <span>◉</span>
-        <div><strong>WORKER</strong><small>Giám sát kết nối</small></div>
-      </div>
-      <div class="feature">
-        <span>◷</span>
-        <div><strong>HISTORY</strong><small>Lịch sử phân tích</small></div>
-      </div>
+      <div class="feature"><span>◉</span><div><strong>WORKER</strong><small>Giám sát kết nối</small></div></div>
+      <div class="feature"><span>◷</span><div><strong>HISTORY</strong><small>Lịch sử phân tích</small></div></div>
     </section>
-
-    <footer>
-      AUTO LINK PRO V11 <span>•</span> SECURE LINK ANALYZER
-    </footer>
+    <footer>AUTO LINK PRO V12 <span>•</span> SECURE LINK ANALYZER</footer>
   </main>
-
   <script src="/script.js" defer></script>
+  <script src="/google-search.js" defer></script>\n  <script src="/provider-guide.js" defer></script>
 </body>
 </html>
