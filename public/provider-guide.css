@@ -1,0 +1,10 @@
+/* V12 provider step-by-step guide */
+.provider-guide{margin:18px 0;padding:18px;border:1px solid #315779;border-radius:14px;background:#0b1b2b}
+.provider-guide h4{margin:0 0 10px;color:#d8edff}
+.provider-guide>p{color:#a9c8e3;font-size:13px;line-height:1.6}
+.provider-guide-list{padding-left:24px;display:grid;gap:10px}
+.provider-guide-list li{color:#b9d5ec;line-height:1.5}
+.provider-guide-list label{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.provider-guide-list input{margin-top:4px;accent-color:#36a5f5;flex:0 0 auto}
+.provider-guide-list input:checked+span{text-decoration:line-through;opacity:.65}
+.provider-guide-progress{font-weight:700;color:#72c5ff!important}
