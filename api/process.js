@@ -54,7 +54,7 @@ function getProvider(hostname) {
 
   for (const provider of providers) {
     if (provider.domains.some(domain =>
-      host === domain
+      host === domain || host.endsWith("." + domain)
     )) return provider.name;
   }
 
