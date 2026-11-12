@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const headingText = "TÌM TRANG PHÙ HỢP TRÊN GOOGLE";
-  const cleanKeyword = value => String(value || "").replace(/\\s+/g, " ").trim().slice(0, 200);
+  const cleanKeyword = value => String(value || "").replace(/\s+/g, " ").trim().slice(0, 200);
 
   function enhanceGooglePanel() {
     const result = document.getElementById("result");
