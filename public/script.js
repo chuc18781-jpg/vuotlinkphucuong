@@ -209,13 +209,24 @@ function findPublicKeyword(data, originalUrl) {
   return null;
 }
 
+function normalizeProvider(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const candidate = raw.toLowerCase().replace(/^https?:\\/\\//, "").split(/[/?#:\\s]/)[0].replace(/^www\\./, "");
+  if (candidate === "link4m" || candidate === "link4m.com" || candidate === "link4m.org" || candidate === "link4m.co" || candidate.endsWith(".link4m.com") || candidate.endsWith(".link4m.org") || candidate.endsWith(".link4m.co")) return "Link4m";
+  if (candidate === "toplinks" || candidate === "toplinks.io" || candidate.endsWith(".toplinks.io")) return "TopLinks";
+  if (candidate === "traffic19" || candidate === "traffic19.com" || candidate.endsWith(".traffic19.com")) return "Traffic19";
+  return raw;
+}
+
 function renderResult(data, originalUrl) {
   result.replaceChildren();
+  const provider = normalizeProvider(data.provider);
 
   const status = STATUS[data.status] || STATUS.unsupported;
   saveHistory({
     url: originalUrl,
-    provider: data.provider || "Không xác định",
+    provider: provider || "Không xác định",
     status: data.status || "unsupported",
     time: new Date().toLocaleString("vi-VN")
   });
@@ -225,7 +236,7 @@ function renderResult(data, originalUrl) {
 
   showText(
     "p",
-    "Nhà cung cấp: " + (data.provider || "Không xác định")
+    "Nhà cung cấp: " + (provider || "Không xác định")
   );
 
   if (data.version) {
@@ -252,7 +263,7 @@ function renderResult(data, originalUrl) {
   // Ưu tiên mở trang lấy mã đã cấu hình cho nhà cung cấp.
   // Link gốc vẫn được giữ để người dùng đối chiếu, không bị nhầm là trang lấy mã.
   const destination = data.destination;
-  const codePage = CODE_PAGES[data.provider];
+  const codePage = CODE_PAGES[provider];
 
   if (destination) {
     showText("h4", "LINK NHÀ CUNG CẤP");
@@ -260,7 +271,7 @@ function renderResult(data, originalUrl) {
   }
 
   if (codePage) {
-    addLink(data.status === "manual_required" && data.provider === "Link4m" ? "MỞ TRANG LẤY MÃ LINK4M ↗" : "MỞ TRANG LẤY MÃ ↗", codePage);
+    addLink(data.status === "manual_required" && provider === "Link4m" ? "MỞ TRANG LẤY MÃ LINK4M ↗" : "MỞ TRANG LẤY MÃ ↗", codePage);
   } else if (destination) {
     addLink("MỞ ĐỊA CHỈ ↗", destination);
   } else {
@@ -272,7 +283,7 @@ function renderResult(data, originalUrl) {
 
   // Chỉ phân tích tham số tìm kiếm có sẵn trong URL gốc/URL redirect được API trả về.
   // Không đọc DOM tab khác, không dò endpoint riêng tư và không tự truy cập kết quả.
-  if (data.provider === "Link4m") {
+  if (provider === "Link4m") {
     const found = findPublicKeyword(data, originalUrl);
     const keyword = found?.keyword || "";
     showText("h4", "TÌM TRANG PHÙ HỢP TRÊN GOOGLE");
@@ -357,7 +368,7 @@ function renderResult(data, originalUrl) {
   }
 
   // Hướng dẫn Link4m được cung cấp bởi người dùng; các bước xác minh vẫn do người dùng tự thực hiện.
-  if (data.provider === "Link4m") {
+  if (provider === "Link4m") {
     showText("h4", "HƯỚNG DẪN LINK4M");
     showText("p", "Link4m yêu cầu xác minh reCAPTCHA và thao tác trực tiếp trên website. V10 không giải CAPTCHA hoặc tự bấm quảng cáo/nút trên trang.");
     showText("p", "1. Mở trang Link4m bằng Chrome thông thường, không dùng chế độ ẩn danh.");
@@ -376,7 +387,7 @@ function renderResult(data, originalUrl) {
 
     const openButton = document.createElement("button");
     openButton.type = "button";
-    openButton.textContent = data.status === "manual_required" && data.provider === "Link4m" ? "MỞ TRANG LẤY MÃ LINK4M ↗" : "MỞ TRANG LẤY MÃ ↗";
+    openButton.textContent = data.status === "manual_required" && provider === "Link4m" ? "MỞ TRANG LẤY MÃ LINK4M ↗" : "MỞ TRANG LẤY MÃ ↗";
     openButton.addEventListener("click", () => {
       window.open(codePage, "_blank", "noopener,noreferrer");
     });
@@ -525,7 +536,7 @@ button.addEventListener("click", async () => {
 
     // Nhận diện nhà cung cấp từ phản hồi API; dự phòng đọc hostname của link gốc
     // để xử lý trường hợp API trả về tên miền có www hoặc tên miền phụ.
-    let detectedProvider = data.provider;
+    let detectedProvider = provider;
     if (!CODE_PAGES[detectedProvider]) {
       const providerDomains = {
         TopLinks: ["toplinks.io"],
