@@ -7,7 +7,7 @@ const result = document.getElementById("result");
 
 const CODE_PAGES = {
   TopLinks: "https://toplinks.io/ataRjVk",
-  Link4m: "https://link4m.org/go/OPZeU",
+  Link4m: "https://link4m.org/yueOBd1l",
   Traffic19: "https://traffic19.com/w13PJjsgO"
 };
 
@@ -168,7 +168,7 @@ function renderResult(data, originalUrl) {
   }
 
   if (codePage) {
-    addLink("MỞ TRANG LẤY MÃ ↗", codePage);
+    addLink(data.status === "manual_required" && data.provider === "Link4m" ? "MỞ TRANG LẤY MÃ LINK4M ↗" : "MỞ TRANG LẤY MÃ ↗", codePage);
   } else if (destination) {
     addLink("MỞ ĐỊA CHỈ ↗", destination);
   } else {
@@ -185,7 +185,7 @@ function renderResult(data, originalUrl) {
 
     const openButton = document.createElement("button");
     openButton.type = "button";
-    openButton.textContent = "MỞ TRANG LẤY MÃ ↗";
+    openButton.textContent = data.status === "manual_required" && data.provider === "Link4m" ? "MỞ TRANG LẤY MÃ LINK4M ↗" : "MỞ TRANG LẤY MÃ ↗";
     openButton.addEventListener("click", () => {
       window.open(codePage, "_blank", "noopener,noreferrer");
     });
