@@ -178,6 +178,38 @@ function renderResult(data, originalUrl) {
   renderWorker(data.worker);
   renderHistory(data.history);
 
+  // Tìm bài viết theo từ khóa Link4m cung cấp; người dùng tự chọn kết quả phù hợp.
+  if (data.provider === "Link4m") {
+    showText("h4", "TÌM BÀI VIẾT THEO TỪ KHÓA LINK4M");
+    showText("p", "Nhập chính xác từ khóa hiển thị trên trang Link4m. V10 sẽ mở trang kết quả Google để bạn tự chọn bài viết.");
+
+    const keywordInput = document.createElement("input");
+    keywordInput.id = "link4mKeywordInput";
+    keywordInput.type = "search";
+    keywordInput.maxLength = 200;
+    keywordInput.autocomplete = "off";
+    keywordInput.placeholder = "Nhập từ khóa tìm kiếm...";
+    keywordInput.setAttribute("aria-label", "Từ khóa tìm kiếm Link4m");
+    result.appendChild(keywordInput);
+
+    const searchButton = document.createElement("button");
+    searchButton.type = "button";
+    searchButton.textContent = "TÌM KIẾM GOOGLE ↗";
+    searchButton.addEventListener("click", () => {
+      const keyword = keywordInput.value.trim();
+      if (!keyword) {
+        keywordInput.focus();
+        showText("p", "Bạn hãy nhập từ khóa trước khi tìm kiếm.");
+        return;
+      }
+      const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(keyword);
+      addLink("MỞ KẾT QUẢ GOOGLE ↗", searchUrl);
+      window.open(searchUrl, "_blank", "noopener,noreferrer");
+    });
+    result.appendChild(searchButton);
+    showText("small", "Lưu ý: Không chọn kết quả có nhãn “Được tài trợ”. Hãy tự kiểm tra tên miền và nội dung bài viết; V10 không tự nhấp kết quả hoặc xác minh CAPTCHA.");
+  }
+
   // Khu vực nhập mã thủ công cho nhà cung cấp đã nhận diện.
   if (codePage) {
     showText("h4", "LẤY MÃ TỪ NHÀ CUNG CẤP");
