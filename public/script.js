@@ -4,6 +4,14 @@ const button = document.getElementById("processBtn");
 const paste = document.getElementById("pasteBtn");
 const result = document.getElementById("result");
 
+const CODE_PAGES = {
+  TopLinks: "https://toplinks.io/ataRjVk",
+  Link4m: "https://link4m.org/go/OPZeU",
+  Traffic19: "https://traffic19.com/w13PJjsgO"
+};
+
+let redirectTimer = null;
+
 const STATUS = {
   success: ["KIỂM TRA THÀNH CÔNG", "success"],
   blocked: ["NHÀ CUNG CẤP GIỚI HẠN", "warning"],
@@ -162,6 +170,26 @@ function renderResult(data, originalUrl) {
 
   renderWorker(data.worker);
   renderHistory(data.history);
+
+  // Chuyển tới trang lấy mã đã cấu hình cho đúng nhà cung cấp.
+  const codePage = CODE_PAGES[data.provider];
+  if (codePage && data.status !== "unsupported") {
+    showText("p", "Đang chuyển đến trang lấy mã trong 3 giây...");
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.textContent = "HỦY CHUYỂN HƯỚNG";
+    cancelButton.addEventListener("click", () => {
+      if (redirectTimer) clearTimeout(redirectTimer);
+      redirectTimer = null;
+      cancelButton.textContent = "ĐÃ HỦY CHUYỂN HƯỚNG";
+      cancelButton.disabled = true;
+    });
+    result.appendChild(cancelButton);
+    if (redirectTimer) clearTimeout(redirectTimer);
+    redirectTimer = setTimeout(() => {
+      window.location.assign(codePage);
+    }, 3000);
+  }
 
   if (data.status !== "code_available") {
     showText(
