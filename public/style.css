@@ -465,3 +465,43 @@ footer span {
   background: #26394c;
   border: 1px solid #405a72;
 }
+
+/* V10: bố cục rõ ràng cho tìm kiếm Link4m và nhập mã */
+#result input#link4mKeywordInput {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  margin: 10px 0 12px;
+  padding: 0 14px;
+  border: 1px solid #315779;
+  border-radius: 10px;
+  outline: none;
+  color: #eaf5ff;
+  background: #071625;
+  font: inherit;
+}
+#result input#link4mKeywordInput:focus {
+  border-color: #39aaff;
+  box-shadow: 0 0 0 3px #168be522;
+}
+#result button {
+  display: block;
+  width: 100%;
+  margin: 9px 0;
+  white-space: normal;
+  line-height: 1.45;
+}
+#result .result-link {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 9px 0;
+  overflow-wrap: anywhere;
+}
+#result label[for="providerCodeInput"] {
+  display: block;
+  margin: 16px 0 8px;
+}
+
