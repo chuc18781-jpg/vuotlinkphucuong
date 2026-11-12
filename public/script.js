@@ -199,13 +199,39 @@ function renderResult(data, originalUrl) {
     codeInput.setAttribute("aria-label", "Mã lấy từ nhà cung cấp");
     result.appendChild(codeInput);
 
+    const codeHint = document.createElement("small");
+    codeHint.className = "provider-code-hint";
+    codeHint.textContent = "Mã chỉ được giữ tạm trong bộ nhớ của tab này; V10 chưa gửi mã đến máy chủ.";
+    result.appendChild(codeHint);
+
     const codeFeedback = document.createElement("p");
+    codeFeedback.className = "provider-code-feedback";
     codeFeedback.setAttribute("role", "status");
+    codeFeedback.setAttribute("aria-live", "polite");
     result.appendChild(codeFeedback);
+
+    const codeActions = document.createElement("div");
+    codeActions.className = "provider-code-actions";
 
     const submitCode = document.createElement("button");
     submitCode.type = "button";
     submitCode.textContent = "GHI NHẬN MÃ";
+    submitCode.disabled = true;
+
+    const clearCode = document.createElement("button");
+    clearCode.type = "button";
+    clearCode.textContent = "XÓA MÃ";
+    clearCode.className = "provider-code-clear";
+    clearCode.disabled = true;
+
+    let recordedCode = "";
+    codeInput.addEventListener("input", () => {
+      const value = codeInput.value.trim();
+      submitCode.disabled = !value || !!recordedCode;
+      clearCode.disabled = !codeInput.value && !recordedCode;
+      codeFeedback.textContent = "";
+    });
+
     const recordCode = () => {
       const enteredCode = codeInput.value.trim();
       if (!enteredCode) {
@@ -213,17 +239,39 @@ function renderResult(data, originalUrl) {
         codeInput.focus();
         return;
       }
-      // Không gửi hoặc lưu mã khi chưa có API xác minh chính thức.
-      codeFeedback.textContent = "Đã nhận mã trong phiên này. Mã chưa được xác minh; hãy tự kiểm tra trên trang dịch vụ đích.";
-      submitCode.textContent = "ĐÃ GHI NHẬN";
-      submitCode.disabled = true;
+      if (enteredCode.length > 200) {
+        codeFeedback.textContent = "Mã quá dài. Vui lòng kiểm tra lại.";
+        return;
+      }
+
+      // Chỉ giữ tạm trong biến của trang; không gửi/lưu mã và không tuyên bố đã xác minh.
+      recordedCode = enteredCode;
+      codeInput.value = enteredCode;
       codeInput.disabled = true;
+      submitCode.textContent = "ĐÃ GHI NHẬN TRONG PHIÊN";
+      submitCode.disabled = true;
+      clearCode.disabled = false;
+      codeFeedback.textContent = "Đã ghi nhận mã trong tab này. Trạng thái hợp lệ CHƯA được xác minh bởi Link4m.";
     };
+
+    const resetCode = () => {
+      recordedCode = "";
+      codeInput.value = "";
+      codeInput.disabled = false;
+      submitCode.textContent = "GHI NHẬN MÃ";
+      submitCode.disabled = true;
+      clearCode.disabled = true;
+      codeFeedback.textContent = "Đã xóa mã khỏi phiên làm việc.";
+      codeInput.focus();
+    };
+
     submitCode.addEventListener("click", recordCode);
+    clearCode.addEventListener("click", resetCode);
     codeInput.addEventListener("keydown", event => {
-      if (event.key === "Enter") recordCode();
+      if (event.key === "Enter" && !submitCode.disabled) recordCode();
     });
-    result.appendChild(submitCode);
+    codeActions.append(submitCode, clearCode);
+    result.appendChild(codeActions);
   }
 
   if (data.status !== "code_available") {
