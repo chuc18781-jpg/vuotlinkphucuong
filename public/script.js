@@ -192,6 +192,26 @@ function renderResult(data, originalUrl) {
     keywordInput.setAttribute("aria-label", "Từ khóa tìm kiếm Link4m");
     result.appendChild(keywordInput);
 
+    const pasteKeywordButton = document.createElement("button");
+    pasteKeywordButton.type = "button";
+    pasteKeywordButton.textContent = "DÁN TỪ KHÓA ĐÃ SAO CHÉP";
+    pasteKeywordButton.addEventListener("click", async () => {
+      try {
+        const copiedText = (await navigator.clipboard.readText()).trim();
+        if (!copiedText) {
+          keywordInput.focus();
+          showText("p", "Clipboard đang trống. Hãy sao chép từ khóa trên trang Link4m trước.");
+          return;
+        }
+        keywordInput.value = copiedText.slice(0, 200);
+        keywordInput.focus();
+      } catch {
+        showText("p", "Trình duyệt không cho phép đọc clipboard. Bạn có thể dán bằng Ctrl + V.");
+        keywordInput.focus();
+      }
+    });
+    result.appendChild(pasteKeywordButton);
+
     const searchButton = document.createElement("button");
     searchButton.type = "button";
     searchButton.textContent = "TÌM KIẾM GOOGLE ↗";
@@ -199,7 +219,7 @@ function renderResult(data, originalUrl) {
       const keyword = keywordInput.value.trim();
       if (!keyword) {
         keywordInput.focus();
-        showText("p", "Bạn hãy nhập từ khóa trước khi tìm kiếm.");
+        showText("p", "Hãy dán hoặc nhập từ khóa Link4m hiển thị trước.");
         return;
       }
       const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(keyword);
