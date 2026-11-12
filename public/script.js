@@ -212,7 +212,7 @@ function findPublicKeyword(data, originalUrl) {
 function normalizeProvider(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
-  const candidate = raw.toLowerCase().replace(/^https?:\\/\\//, "").split(/[/?#:\\s]/)[0].replace(/^www\\./, "");
+  const candidate = raw.toLowerCase().replace(/^https?:\/\//, "").split(/[/?#:\s]/)[0].replace(/^www\./, "");
   if (candidate === "link4m" || candidate === "link4m.com" || candidate === "link4m.org" || candidate === "link4m.co" || candidate.endsWith(".link4m.com") || candidate.endsWith(".link4m.org") || candidate.endsWith(".link4m.co")) return "Link4m";
   if (candidate === "toplinks" || candidate === "toplinks.io" || candidate.endsWith(".toplinks.io")) return "TopLinks";
   if (candidate === "traffic19" || candidate === "traffic19.com" || candidate.endsWith(".traffic19.com")) return "Traffic19";
