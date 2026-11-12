@@ -47,6 +47,7 @@ function getProvider(hostname) {
   const host = hostname.toLowerCase().replace(/\.$/, "");
 
   const providers = [
+    { name: "TopLinks", domains: ["toplinks.io"] },
     { name: "Link4m", domains: ["link4m.org", "link4m.com", "link4m.co"] },
     { name: "Traffic19", domains: ["traffic19.com"] }
   ];
