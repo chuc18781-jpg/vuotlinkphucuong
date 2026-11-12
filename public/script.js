@@ -7,6 +7,7 @@ const result = document.getElementById("result");
 const STATUS = {
   success: ["KIỂM TRA THÀNH CÔNG", "success"],
   blocked: ["NHÀ CUNG CẤP GIỚI HẠN", "warning"],
+  rate_limited: ["QUÁ NHIỀU YÊU CẦU", "warning"],
   manual_required: ["CẦN THAO TÁC THỦ CÔNG", "warning"],
   verification_required: ["CẦN XÁC MINH", "warning"],
   worker_unavailable: ["WORKER KHÔNG KHẢ DỤNG", "warning"],
