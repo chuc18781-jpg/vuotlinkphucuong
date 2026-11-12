@@ -145,8 +145,8 @@ function findPublicKeyword(data, originalUrl) {
   for (const url of candidates) {
     for (const [key, value] of url.searchParams.entries()) {
       if (!allowedKeys.has(key.toLowerCase())) continue;
-      const keyword = value.trim().replace(/\\s+/g, " ").slice(0, 200);
-      if (keyword && !/^https?:\\/\\//i.test(keyword)) {
+      const keyword = value.trim().replace(/\s+/g, " ").slice(0, 200);
+      if (keyword && !/^https?:\/\//i.test(keyword)) {
         return { keyword, source: url.hostname + " ?" + key };
       }
     }
