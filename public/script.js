@@ -294,6 +294,19 @@ function renderResult(data, originalUrl) {
     }
   }
 
+  // Hướng dẫn Link4m được cung cấp bởi người dùng; các bước xác minh vẫn do người dùng tự thực hiện.
+  if (data.provider === "Link4m") {
+    showText("h4", "HƯỚNG DẪN LINK4M");
+    showText("p", "Link4m yêu cầu xác minh reCAPTCHA và thao tác trực tiếp trên website. V10 không giải CAPTCHA hoặc tự bấm quảng cáo/nút trên trang.");
+    showText("p", "1. Mở trang Link4m bằng Chrome thông thường, không dùng chế độ ẩn danh.");
+    showText("p", "2. Tự hoàn thành reCAPTCHA trên trang Link4m nếu được yêu cầu.");
+    showText("p", "3. Làm theo phần hướng dẫn tìm kiếm từ khóa mà Link4m hiển thị. Không chọn kết quả quảng cáo có nhãn “Được tài trợ”.");
+    showText("p", "4. Kéo xuống cuối bài viết và tự nhấn nút “LẤY MÃ”, sau đó chờ theo thời gian trang yêu cầu.");
+    showText("p", "5. Làm theo yêu cầu của website đích; nếu Link4m yêu cầu mở một liên kết trên website, hãy tự thực hiện rồi quay lại vị trí lấy mã.");
+    showText("p", "6. Sao chép mã do Link4m cấp, quay lại V10 và nhập vào ô bên dưới.");
+    showText("small", "Các bước 1–3 ở trên là hướng dẫn thao tác an toàn được tóm tắt; nội dung hình ảnh chi tiết của các bước đầu chưa có trong dữ liệu bạn gửi. Hãy ưu tiên hướng dẫn đang hiển thị trên trang Link4m.");
+  }
+
   // Khu vực nhập mã thủ công cho nhà cung cấp đã nhận diện.
   if (codePage) {
     showText("h4", "LẤY MÃ TỪ NHÀ CUNG CẤP");
