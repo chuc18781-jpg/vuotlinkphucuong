@@ -196,22 +196,32 @@ function renderResult(data, originalUrl) {
     codeInput.autocomplete = "off";
     codeInput.maxLength = 200;
     codeInput.placeholder = "Nhập mã tại đây";
+    codeInput.setAttribute("aria-label", "Mã lấy từ nhà cung cấp");
     result.appendChild(codeInput);
+
+    const codeFeedback = document.createElement("p");
+    codeFeedback.setAttribute("role", "status");
+    result.appendChild(codeFeedback);
 
     const submitCode = document.createElement("button");
     submitCode.type = "button";
     submitCode.textContent = "GHI NHẬN MÃ";
-    submitCode.addEventListener("click", () => {
+    const recordCode = () => {
       const enteredCode = codeInput.value.trim();
       if (!enteredCode) {
-        showText("p", "Bạn chưa nhập mã.");
+        codeFeedback.textContent = "Bạn chưa nhập mã.";
         codeInput.focus();
         return;
       }
-      showText("p", "Đã ghi nhận mã bạn nhập. Mã chưa được xác minh vì Traffic19 chưa cung cấp API kiểm tra mã.");
+      // Không gửi hoặc lưu mã khi chưa có API xác minh chính thức.
+      codeFeedback.textContent = "Đã nhận mã trong phiên này. Mã chưa được xác minh; hãy tự kiểm tra trên trang dịch vụ đích.";
       submitCode.textContent = "ĐÃ GHI NHẬN";
       submitCode.disabled = true;
       codeInput.disabled = true;
+    };
+    submitCode.addEventListener("click", recordCode);
+    codeInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") recordCode();
     });
     result.appendChild(submitCode);
   }
