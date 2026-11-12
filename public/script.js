@@ -157,12 +157,19 @@ function renderResult(data, originalUrl) {
     result.appendChild(copyButton);
   }
 
-  // Hiển thị địa chỉ chuyển hướng.
+  // Ưu tiên mở trang lấy mã đã cấu hình cho nhà cung cấp.
+  // Link gốc vẫn được giữ để người dùng đối chiếu, không bị nhầm là trang lấy mã.
   const destination = data.destination;
+  const codePage = CODE_PAGES[data.provider];
 
-  if (destination && destination !== originalUrl) {
-    showText("h4", "ĐỊA CHỈ CHUYỂN HƯỚNG");
+  if (destination) {
+    showText("h4", "LINK NHÀ CUNG CẤP");
     showText("p", destination);
+  }
+
+  if (codePage) {
+    addLink("MỞ TRANG LẤY MÃ ↗", codePage);
+  } else if (destination) {
     addLink("MỞ ĐỊA CHỈ ↗", destination);
   } else {
     addLink("MỞ TRANG NHÀ CUNG CẤP ↗", originalUrl);
