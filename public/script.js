@@ -259,7 +259,7 @@ function renderResult(data, originalUrl) {
       searchButton.textContent = "TÌM KIẾM GOOGLE ↗";
       searchButton.disabled = true;
       searchButton.addEventListener("click", () => {
-        const manualKeyword = keywordInput.value.trim().replace(/\\s+/g, " ").slice(0, 200);
+        const manualKeyword = keywordInput.value.trim().replace(/\s+/g, " ").slice(0, 200);
         if (!manualKeyword) {
           searchFeedback.textContent = "Vui lòng nhập từ khóa trước.";
           keywordInput.focus();
