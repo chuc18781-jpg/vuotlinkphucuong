@@ -281,27 +281,7 @@ function renderResult(data, originalUrl) {
       showText("p", "V10 phát hiện từ khóa trong tham số URL công khai (" + found.source + "):");
       showText("p", keyword, "verification-code");
 
-      // Thử tự sao chép từ khóa khi kết quả được tải. Một số trình duyệt
-      // yêu cầu thao tác trực tiếp của người dùng nên luôn có nút sao chép dự phòng.
-      const copyKeywordStatus = showText("small", "Đang sao chép từ khóa tìm kiếm...");
-      const copyKeywordButton = document.createElement("button");
-      copyKeywordButton.type = "button";
-      copyKeywordButton.textContent = "SAO CHÉP TỪ KHÓA";
-      copyKeywordButton.addEventListener("click", () => copyText(keyword, copyKeywordButton));
-      result.appendChild(copyKeywordButton);
-      (async () => {
-        try {
-          if (!navigator.clipboard || !window.isSecureContext) {
-            throw new Error("Clipboard API không khả dụng");
-          }
-          await navigator.clipboard.writeText(keyword);
-          copyKeywordStatus.textContent = "✓ Đã tự động sao chép từ khóa tìm kiếm.";
-          copyKeywordButton.textContent = "SAO CHÉP LẠI TỪ KHÓA";
-        } catch {
-          copyKeywordStatus.textContent = "Trình duyệt chặn sao chép tự động. Hãy bấm nút “SAO CHÉP TỪ KHÓA”.";
-        }
-      })();
-
+      // V12: không tự sao chép khi tải kết quả; người dùng chủ động bấm nút sao chép trong panel Google Search Smart.
       const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(keyword);
       addLink("XEM KẾT QUẢ GOOGLE ĐƯỢC XẾP HẠNG ↗", searchUrl);
 
