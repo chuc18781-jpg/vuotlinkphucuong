@@ -178,8 +178,7 @@ function renderResult(data, originalUrl) {
   renderWorker(data.worker);
   renderHistory(data.history);
 
-  // Mở trang lấy mã do người dùng cung cấp trong tab mới.
-  const codePage = CODE_PAGES[data.provider];
+  // Khu vực nhập mã thủ công cho nhà cung cấp đã nhận diện.
   if (codePage) {
     showText("h4", "LẤY MÃ TỪ NHÀ CUNG CẤP");
     showText("p", "Mở trang nhà cung cấp ở tab mới, hoàn thành các bước tại đó rồi quay lại nhập mã bên dưới.");
