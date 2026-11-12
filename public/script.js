@@ -334,17 +334,26 @@ button.addEventListener("click", async () => {
     // để xử lý trường hợp API trả về tên miền có www hoặc tên miền phụ.
     let detectedProvider = data.provider;
     if (!CODE_PAGES[detectedProvider]) {
-      try {
-        const host = new URL(url).hostname.toLowerCase().replace(/^www\\./, "");
-        detectedProvider = Object.keys(CODE_PAGES).find(name => {
-          const domain = {
-            TopLinks: "toplinks.io",
-            Link4m: "link4m.org",
-            Traffic19: "traffic19.com"
-          }[name];
-          return host === domain || host.endsWith("." + domain);
-        }) || detectedProvider;
-      } catch {}
+      const providerDomains = {
+        TopLinks: ["toplinks.io"],
+        Link4m: ["link4m.org", "link4m.com", "link4m.co"],
+        Traffic19: ["traffic19.com"]
+      };
+
+      // Thử nhận diện cả link ban đầu lẫn URL cuối cùng sau redirect.
+      for (const candidate of [data.destination, url]) {
+        if (!candidate) continue;
+        try {
+          const host = new URL(candidate).hostname.toLowerCase().replace(/^www\\./, "");
+          const match = Object.entries(providerDomains).find(([, domains]) =>
+            domains.some(domain => host === domain || host.endsWith("." + domain))
+          );
+          if (match) {
+            detectedProvider = match[0];
+            break;
+          }
+        } catch {}
+      }
     }
 
     const routedData = { ...data, provider: detectedProvider };
