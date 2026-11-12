@@ -436,3 +436,32 @@ footer span {
 #result button {
   margin: 5px 8px 8px 0;
 }
+
+/* V10: trạng thái nhập mã nhà cung cấp */
+.provider-code-hint {
+  display: block;
+  margin: 8px 0 12px;
+  color: #819db7;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.provider-code-feedback {
+  min-height: 22px;
+  margin: 8px 0 !important;
+  color: #ffd27a !important;
+}
+.provider-code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 8px 0 14px;
+}
+#result .provider-code-actions button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+#result .provider-code-actions .provider-code-clear {
+  color: #b9d2e8;
+  background: #26394c;
+  border: 1px solid #405a72;
+}
