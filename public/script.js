@@ -171,6 +171,50 @@ function renderResult(data, originalUrl) {
   renderWorker(data.worker);
   renderHistory(data.history);
 
+  // Mở trang lấy mã do người dùng cung cấp trong tab mới.
+  const codePage = CODE_PAGES[data.provider];
+  if (codePage && data.status !== "unsupported") {
+    showText("h4", "LẤY MÃ TỪ NHÀ CUNG CẤP");
+    showText("p", "Mở trang nhà cung cấp ở tab mới, hoàn thành các bước tại đó rồi quay lại nhập mã bên dưới.");
+
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.textContent = "MỞ TRANG LẤY MÃ ↗";
+    openButton.addEventListener("click", () => {
+      window.open(codePage, "_blank", "noopener,noreferrer");
+    });
+    result.appendChild(openButton);
+
+    const codeLabel = document.createElement("label");
+    codeLabel.textContent = "NHẬP MÃ BẠN ĐÃ LẤY ĐƯỢC";
+    codeLabel.htmlFor = "providerCodeInput";
+    result.appendChild(codeLabel);
+
+    const codeInput = document.createElement("input");
+    codeInput.id = "providerCodeInput";
+    codeInput.type = "text";
+    codeInput.autocomplete = "off";
+    codeInput.maxLength = 200;
+    codeInput.placeholder = "Nhập mã tại đây";
+    result.appendChild(codeInput);
+
+    const submitCode = document.createElement("button");
+    submitCode.type = "button";
+    submitCode.textContent = "GHI NHẬN MÃ";
+    submitCode.addEventListener("click", () => {
+      const enteredCode = codeInput.value.trim();
+      if (!enteredCode) {
+        showText("p", "Bạn chưa nhập mã.");
+        codeInput.focus();
+        return;
+      }
+      showText("p", "Đã ghi nhận mã bạn nhập. Mã chưa được xác minh vì Traffic19 chưa cung cấp API kiểm tra mã.");
+      submitCode.textContent = "ĐÃ GHI NHẬN";
+      submitCode.disabled = true;
+      codeInput.disabled = true;
+    });
+    result.appendChild(submitCode);
+  }
 
   if (data.status !== "code_available") {
     showText(
